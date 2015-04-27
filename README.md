@@ -11,11 +11,12 @@ $ npm install @pocesar/moip2 --save
 ## Typescript
 
 ```typescript
+/* se não tiver o bluebird nos typings */
+/// <reference path="node_modules/@pocesar/moip2/typings/bluebird/bluebird.d.ts" />
+/* ou tudo */
+/// <reference path="node_modules/@pocesar/moip2/typings/tsd.d.ts" />
+/* typings especificos do MOIP */
 /// <reference path="node_modules/@pocesar/moip2/moip.d.ts" />
-
-declare module '@pocesar/moip2' {
-    export = Moip;
-}
 ```
 
 ## Usage

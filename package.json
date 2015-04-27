@@ -9,7 +9,7 @@
     },
     "scripts": {
         "release": "npm publish --access=public",
-        "compile": "tsc --noImplicitAny --module commonjs --target es5 --declaration moip.ts"
+        "compile": "tsc --noImplicitAny --module commonjs --target es5 moip.ts"
     },
     "license": "GPLv3"
 }
