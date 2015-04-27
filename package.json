@@ -6,5 +6,5 @@
     "request":"2.x",
     "bluebird":"2.x"
   },
-  "license": "GPLv1"
+  "license": "GPLv3"
 }
