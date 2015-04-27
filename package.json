@@ -1,0 +1,10 @@
+{
+  "name":"@pocesar/moip2",
+  "version":"0.1.0",
+  "main":"./moip.js",
+  "dependencies":{
+    "request":"2.x",
+    "bluebird":"2.x"
+  },
+  "license": "GPLv1"
+}
