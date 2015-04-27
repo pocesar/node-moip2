@@ -1,10 +1,15 @@
 {
-  "name":"@pocesar/moip2",
-  "version":"0.1.0",
-  "main":"./moip.js",
-  "dependencies":{
-    "request":"2.x",
-    "bluebird":"2.x"
-  },
-  "license": "GPLv3"
+    "name":"@pocesar/moip2",
+    "version":"0.1.0",
+    "main":"./moip.js",
+    "author": "Paulo Cesar <https://github.com/pocesar>",
+    "dependencies":{
+        "request":"2.x",
+        "bluebird":"2.x"
+    },
+    "scripts": {
+        "release": "npm publish --access=public",
+        "compile": "tsc --noImplicitAny --module commonjs --target es5 --declaration moip.ts"
+    },
+    "license": "GPLv3"
 }
