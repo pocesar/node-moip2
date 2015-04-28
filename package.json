@@ -2,6 +2,7 @@
     "name":"@pocesar/moip2",
     "version":"0.2.0",
     "main":"./moip.js",
+    "description": "API for MOIP v2 HATEOAS with Typescript typings",
     "author": "Paulo Cesar <https://github.com/pocesar>",
     "dependencies":{
         "request":"2.x",
