@@ -2,6 +2,29 @@
 'use strict';
 var request = require('request');
 var Bluebird = require('bluebird');
+var util = require('util');
+var MoipError = (function () {
+    function MoipError(errors, code) {
+        this.errors = errors;
+        this.code = code;
+        var err = Error;
+        err.captureStackTrace(this, MoipError);
+        this.name = 'MoipError';
+        var errStrs = [];
+        if (typeof errors === 'object') {
+            this.errors.forEach(function (error) {
+                errStrs.push("" + error.code + " [" + error.path + "]: " + error.description);
+            });
+        }
+        else {
+            this.errors = [this.errors];
+        }
+        this.message = errStrs.join("\n");
+    }
+    return MoipError;
+})();
+exports.MoipError = MoipError;
+util.inherits(MoipError, Error);
 (function (IMoipMethod) {
     IMoipMethod[IMoipMethod["get"] = 0] = "get";
     IMoipMethod[IMoipMethod["put"] = 1] = "put";
@@ -10,9 +33,9 @@ var Bluebird = require('bluebird');
 })(exports.IMoipMethod || (exports.IMoipMethod = {}));
 var IMoipMethod = exports.IMoipMethod;
 (function (IMoipPaymentMethod) {
-    IMoipPaymentMethod[IMoipPaymentMethod["ONLINE_BANK_DEBIT"] = 0] = "ONLINE_BANK_DEBIT";
-    IMoipPaymentMethod[IMoipPaymentMethod["BOLETO"] = 1] = "BOLETO";
-    IMoipPaymentMethod[IMoipPaymentMethod["CREDIT_CARD"] = 2] = "CREDIT_CARD";
+    IMoipPaymentMethod[IMoipPaymentMethod["ONLINE_BANK_DEBIT"] = 'ONLINE_BANK_DEBIT'] = "ONLINE_BANK_DEBIT";
+    IMoipPaymentMethod[IMoipPaymentMethod["BOLETO"] = 'BOLETO'] = "BOLETO";
+    IMoipPaymentMethod[IMoipPaymentMethod["CREDIT_CARD"] = 'CREDIT_CARD'] = "CREDIT_CARD";
 })(exports.IMoipPaymentMethod || (exports.IMoipPaymentMethod = {}));
 var IMoipPaymentMethod = exports.IMoipPaymentMethod;
 var Moip = (function () {
@@ -54,11 +77,21 @@ var Moip = (function () {
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);
                         }
+                        else if (body.errors) {
+                            reject(new MoipError(body.errors, response.statusCode));
+                        }
                         else if (error) {
                             reject(error);
                         }
+                        else if (body.ERROR) {
+                            reject(new MoipError([{
+                                code: '?',
+                                path: '?',
+                                description: body.ERROR
+                            }], response.statusCode));
+                        }
                         else {
-                            reject(body);
+                            reject(new Error(body));
                         }
                     });
                     break;
@@ -80,14 +113,13 @@ var Moip = (function () {
         return this._request(0 /* get */, '/orders/' + orderId, {});
     };
     Moip.prototype.createPayment = function (payment, orderId) {
-        payment.fundingInstrument.method = IMoipPaymentMethod[payment.fundingInstrument.method];
         return this._request(3 /* post */, '/orders/' + orderId + '/payments', payment);
     };
     Moip.prototype.getPayment = function (paymentId) {
         return this._request(0 /* get */, '/payments/' + paymentId, {});
     };
     Moip.JS = {
-        dev: '//assets.moip.com.br/integration/moip.js',
+        dev: '//assets.moip.com.br/integration/moip.min.js',
         prod: '//assets.moip.com.br/integration/moip.min.js'
     };
     return Moip;

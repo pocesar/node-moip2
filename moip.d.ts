@@ -1,11 +1,30 @@
-declare module Moip {
-    import Bluebird = Promise;
+/// <reference path="typings/bluebird/bluebird.d.ts" />
+/// <reference path="typings/node/node.d.ts" />
 
+declare module '@pocesar/moip2' {
+    import Bluebird = require('bluebird');
+
+    export interface IMoipCustomError extends Error {
+        errors: IMoipError[];
+        code: number;
+    }
+    export class MoipError implements IMoipCustomError {
+        errors: IMoipError[];
+        code: number;
+        name: string;
+        message: string;
+        constructor(errors: IMoipError[], code: number);
+    }
     export enum IMoipMethod {
         get = 0,
         put = 1,
         del = 2,
         post = 3,
+    }
+    export interface IMoipError {
+        code: string;
+        path: string;
+        description: string;
     }
     export interface IMoipHATEOAS {
         title?: string;
@@ -29,12 +48,12 @@ declare module Moip {
     }
     export interface IMoipOrderLinks extends IMoipLinks {
         checkout: {
-            payOnlineBankDebitItau: IMoipHATEOAS;
-            payOnlineBankDebitBB: IMoipHATEOAS;
-            payCreditCard: IMoipHATEOAS;
-            payOnlineBankDebitBradesco: IMoipHATEOAS;
-            payBoleto: IMoipHATEOAS;
-            payOnlineBankDebitBanrisul: IMoipHATEOAS;
+            payOnlineBankDebitItau?: IMoipHATEOAS;
+            payOnlineBankDebitBB?: IMoipHATEOAS;
+            payCreditCard?: IMoipHATEOAS;
+            payOnlineBankDebitBradesco?: IMoipHATEOAS;
+            payBoleto?: IMoipHATEOAS;
+            payOnlineBankDebitBanrisul?: IMoipHATEOAS;
         };
     }
     export interface IMoipEvents {
@@ -49,7 +68,7 @@ declare module Moip {
         receivers: IMoipReceiver[];
         shippingAddress: IMoipShippingAddress;
     }
-    export interface IMoipPaymentLinks {
+    export interface IMoipPaymentLinks extends IMoipOrderLinks {
         order: IMoipHATEOAS;
     }
     export interface IMoipFee {
@@ -105,9 +124,9 @@ declare module Moip {
         holder: IMoipFundingInstrumentCreditCardHolder;
     }
     export enum IMoipPaymentMethod {
-        ONLINE_BANK_DEBIT = 0,
-        BOLETO = 1,
-        CREDIT_CARD = 2,
+        ONLINE_BANK_DEBIT,
+        BOLETO,
+        CREDIT_CARD,
     }
     export interface IMoipFundingInstrument {
         method: IMoipPaymentMethod;
@@ -196,6 +215,3 @@ declare module Moip {
     }
 }
 
-declare module '@pocesar/moip2' {
-    export = Moip;
-}

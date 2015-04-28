@@ -7,11 +7,48 @@ import request = require('request');
 import Bluebird = require('bluebird');
 import util = require('util');
 
+export interface IMoipCustomError extends Error {
+    errors: IMoipError[];
+    code: number;
+}
+
+export class MoipError implements IMoipCustomError {
+    public name: string;
+    public message: string;
+
+    constructor(public errors: IMoipError[], public code: number) {
+        var err: any = Error;
+        err.captureStackTrace(this, MoipError);
+        this.name = 'MoipError';
+
+        var errStrs: string[] = [];
+
+        if (typeof errors === 'object') {
+
+            this.errors.forEach((error) => {
+                errStrs.push(`${error.code} [${error.path}]: ${error.description}`);
+            });
+        } else {
+            this.errors = <any>[this.errors];
+        }
+
+        this.message = errStrs.join("\n");
+    }
+}
+
+util.inherits(MoipError, Error);
+
 export enum IMoipMethod {
     get,
     put,
     del,
     post
+}
+
+export interface IMoipError {
+    code: string;
+    path: string;
+    description: string;
 }
 
 export interface IMoipHATEOAS {
@@ -39,12 +76,12 @@ export interface IMoipCustomerResponse extends IMoipResponse<IMoipLinks>, IMoipC
 
 export interface IMoipOrderLinks extends IMoipLinks {
     checkout: {
-        payOnlineBankDebitItau: IMoipHATEOAS;
-        payOnlineBankDebitBB: IMoipHATEOAS;
-        payCreditCard: IMoipHATEOAS;
-        payOnlineBankDebitBradesco: IMoipHATEOAS;
-        payBoleto: IMoipHATEOAS;
-        payOnlineBankDebitBanrisul: IMoipHATEOAS;
+        payOnlineBankDebitItau?: IMoipHATEOAS;
+        payOnlineBankDebitBB?: IMoipHATEOAS;
+        payCreditCard?: IMoipHATEOAS;
+        payOnlineBankDebitBradesco?: IMoipHATEOAS;
+        payBoleto?: IMoipHATEOAS;
+        payOnlineBankDebitBanrisul?: IMoipHATEOAS;
     };
 }
 
@@ -62,7 +99,7 @@ export interface IMoipOrderResponse extends IMoipResponse<IMoipOrderLinks>, IMoi
     shippingAddress: IMoipShippingAddress;
 }
 
-export interface IMoipPaymentLinks {
+export interface IMoipPaymentLinks extends IMoipOrderLinks {
     order: IMoipHATEOAS;
 }
 
@@ -128,9 +165,9 @@ export interface IMoipFundingInstrumentCreditCard {
 }
 
 export enum IMoipPaymentMethod {
-    ONLINE_BANK_DEBIT,
-    BOLETO,
-    CREDIT_CARD
+    ONLINE_BANK_DEBIT=<any>'ONLINE_BANK_DEBIT',
+    BOLETO=<any>'BOLETO',
+    CREDIT_CARD=<any>'CREDIT_CARD'
 }
 
 export interface IMoipFundingInstrument {
@@ -215,7 +252,7 @@ export interface IMoipOrder {
 
 export class Moip {
     static JS = {
-        dev: '//assets.moip.com.br/integration/moip.js',
+        dev: '//assets.moip.com.br/integration/moip.min.js',
         prod: '//assets.moip.com.br/integration/moip.min.js'
     };
     private auth: string;
@@ -258,10 +295,18 @@ export class Moip {
                     }, (error, response, body) => {
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);
+                        } else if (body.errors) {
+                            reject(new MoipError(body.errors, response.statusCode));
                         } else if (error) {
                             reject(error);
+                        } else if (body.ERROR) {
+                            reject(new MoipError([{
+                                code: '?',
+                                path: '?',
+                                description: body.ERROR
+                            }], response.statusCode));
                         } else {
-                            reject(body);
+                            reject(new Error(body));
                         }
                     });
 
@@ -289,7 +334,6 @@ export class Moip {
     }
 
     createPayment(payment: IMoipPayment, orderId: string) {
-        payment.fundingInstrument.method = <any>IMoipPaymentMethod[payment.fundingInstrument.method];
         return this._request<IMoipPaymentResponse>(IMoipMethod.post, '/orders/' + orderId + '/payments', payment);
     }
 

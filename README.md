@@ -11,10 +11,6 @@ $ npm install @pocesar/moip2 --save
 ## Typescript
 
 ```typescript
-/* se não tiver o bluebird nos typings */
-/// <reference path="node_modules/@pocesar/moip2/typings/bluebird/bluebird.d.ts" />
-/* ou tudo */
-/// <reference path="node_modules/@pocesar/moip2/typings/tsd.d.ts" />
 /* typings especificos do MOIP */
 /// <reference path="node_modules/@pocesar/moip2/moip.d.ts" />
 ```
@@ -84,6 +80,10 @@ instance.createCustomer({
     }, order.id);
 }).then(function(payment){
     console.log('Sucesso!', payment);
+}).catch('MoipError', function(err){
+    err.errors.forEach(function(e){
+        e.code + e.path + e.description;
+    });
 }).catch(console.error.bind(console));
 ```
 
