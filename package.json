@@ -1,6 +1,6 @@
 {
     "name":"@pocesar/moip2",
-    "version":"0.2.0",
+    "version":"0.2.1",
     "main":"./moip.js",
     "description": "API for MOIP v2 HATEOAS with Typescript typings",
     "author": "Paulo Cesar <https://github.com/pocesar>",
@@ -8,6 +8,16 @@
         "request":"2.x",
         "bluebird":"2.x"
     },
+    "keywords": [
+        "moip",
+        "api",
+        "moipjs",
+        "v2.0",
+        "api2",
+        "hateoas",
+        "typescript",
+        "typings"
+    ],
     "scripts": {
         "release": "npm publish --access=public",
         "compile": "tsc --noImplicitAny --module commonjs --target es5 moip.ts"
