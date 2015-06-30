@@ -1,5 +1,3 @@
-/// <reference path="typings/tsd.d.ts" />
-
 'use strict';
 
 import crypto = require('crypto');
@@ -28,6 +26,7 @@ export class MoipError implements IMoipCustomError {
             this.errors.forEach((error) => {
                 errStrs.push(`${error.code} [${error.path}]: ${error.description}`);
             });
+
         } else {
             this.errors = <any>[this.errors];
         }
@@ -74,15 +73,17 @@ export interface IMoipCustomerResponse extends IMoipResponse<IMoipLinks>, IMoipC
 
 }
 
+export interface IMoipCheckoutLinks {
+    payOnlineBankDebitItau?: IMoipHATEOAS;
+    payOnlineBankDebitBB?: IMoipHATEOAS;
+    payCreditCard?: IMoipHATEOAS;
+    payOnlineBankDebitBradesco?: IMoipHATEOAS;
+    payBoleto?: IMoipHATEOAS;
+    payOnlineBankDebitBanrisul?: IMoipHATEOAS;
+}
+
 export interface IMoipOrderLinks extends IMoipLinks {
-    checkout: {
-        payOnlineBankDebitItau?: IMoipHATEOAS;
-        payOnlineBankDebitBB?: IMoipHATEOAS;
-        payCreditCard?: IMoipHATEOAS;
-        payOnlineBankDebitBradesco?: IMoipHATEOAS;
-        payBoleto?: IMoipHATEOAS;
-        payOnlineBankDebitBanrisul?: IMoipHATEOAS;
-    };
+    checkout: IMoipCheckoutLinks;
 }
 
 export interface IMoipEvents {
@@ -99,8 +100,9 @@ export interface IMoipOrderResponse extends IMoipResponse<IMoipOrderLinks>, IMoi
     shippingAddress: IMoipShippingAddress;
 }
 
-export interface IMoipPaymentLinks extends IMoipOrderLinks {
+export interface IMoipPaymentLinks extends IMoipCheckoutLinks {
     order: IMoipHATEOAS;
+    checkout: IMoipCheckoutLinks;
 }
 
 export interface IMoipFee {
@@ -112,6 +114,48 @@ export interface IMoipPaymentResponse extends IMoipResponse<IMoipPaymentLinks>, 
     status: string;
     fees: IMoipFee[];
     fundingInstrument: IMoipFundingInstrument;
+}
+
+export enum IMoipOrderStatus {
+    CREATED=<any>'CREATED',
+    WAITING=<any>'WAITING',
+    PAID=<any>'PAID',
+    NOT_PAID=<any>'NOT_PAID',
+    REVERTED=<any>'REVERTED'
+}
+
+export enum IMoipPaymentStatus {
+    WAITING = <any>'WAITING',
+    AUTHORIZED = <any>'AUTHORIZED',
+    IN_ANALYSIS = <any>'IN_ANALYSIS',
+    CANCELLED = <any>'CANCELLED',
+    REFUNDED = <any>'REFUNDED'
+}
+
+export interface IMoipEventResourceBase extends IMoipEvents {
+    id: string;
+    amount: IMoipAmount;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface IMoipEventResourceOrder extends IMoipEventResourceBase {
+    status: IMoipOrderStatus;
+}
+
+export interface IMoipEventResourcePayment extends IMoipEventResourceBase, IMoipFundingInstrumentCreditCard {
+    status: IMoipPaymentStatus;
+}
+
+export interface IMoipEventResource {
+    order?: IMoipEventResourceOrder;
+    payment?: IMoipEventResourcePayment;
+}
+
+export interface IMoipWebhook {
+    event?: string;
+    createdAt?: string;
+    resource?: IMoipEventResource;
 }
 
 export interface IMoipEvent {
@@ -265,7 +309,7 @@ export class Moip {
         if (production === true) {
             this.env = 'https://api.moip.com.br/v2';
         } else {
-            this.env = 'https://test.moip.com.br/v2';
+            this.env = 'https://sandbox.moip.com.br/v2';
         }
     }
 

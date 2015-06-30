@@ -1,4 +1,3 @@
-/// <reference path="typings/tsd.d.ts" />
 'use strict';
 var request = require('request');
 var Bluebird = require('bluebird');
@@ -13,7 +12,7 @@ var MoipError = (function () {
         var errStrs = [];
         if (typeof errors === 'object') {
             this.errors.forEach(function (error) {
-                errStrs.push("" + error.code + " [" + error.path + "]: " + error.description);
+                errStrs.push(error.code + " [" + error.path + "]: " + error.description);
             });
         }
         else {
@@ -32,6 +31,22 @@ util.inherits(MoipError, Error);
     IMoipMethod[IMoipMethod["post"] = 3] = "post";
 })(exports.IMoipMethod || (exports.IMoipMethod = {}));
 var IMoipMethod = exports.IMoipMethod;
+(function (IMoipOrderStatus) {
+    IMoipOrderStatus[IMoipOrderStatus["CREATED"] = 'CREATED'] = "CREATED";
+    IMoipOrderStatus[IMoipOrderStatus["WAITING"] = 'WAITING'] = "WAITING";
+    IMoipOrderStatus[IMoipOrderStatus["PAID"] = 'PAID'] = "PAID";
+    IMoipOrderStatus[IMoipOrderStatus["NOT_PAID"] = 'NOT_PAID'] = "NOT_PAID";
+    IMoipOrderStatus[IMoipOrderStatus["REVERTED"] = 'REVERTED'] = "REVERTED";
+})(exports.IMoipOrderStatus || (exports.IMoipOrderStatus = {}));
+var IMoipOrderStatus = exports.IMoipOrderStatus;
+(function (IMoipPaymentStatus) {
+    IMoipPaymentStatus[IMoipPaymentStatus["WAITING"] = 'WAITING'] = "WAITING";
+    IMoipPaymentStatus[IMoipPaymentStatus["AUTHORIZED"] = 'AUTHORIZED'] = "AUTHORIZED";
+    IMoipPaymentStatus[IMoipPaymentStatus["IN_ANALYSIS"] = 'IN_ANALYSIS'] = "IN_ANALYSIS";
+    IMoipPaymentStatus[IMoipPaymentStatus["CANCELLED"] = 'CANCELLED'] = "CANCELLED";
+    IMoipPaymentStatus[IMoipPaymentStatus["REFUNDED"] = 'REFUNDED'] = "REFUNDED";
+})(exports.IMoipPaymentStatus || (exports.IMoipPaymentStatus = {}));
+var IMoipPaymentStatus = exports.IMoipPaymentStatus;
 (function (IMoipPaymentMethod) {
     IMoipPaymentMethod[IMoipPaymentMethod["ONLINE_BANK_DEBIT"] = 'ONLINE_BANK_DEBIT'] = "ONLINE_BANK_DEBIT";
     IMoipPaymentMethod[IMoipPaymentMethod["BOLETO"] = 'BOLETO'] = "BOLETO";
@@ -47,7 +62,7 @@ var Moip = (function () {
             this.env = 'https://api.moip.com.br/v2';
         }
         else {
-            this.env = 'https://test.moip.com.br/v2';
+            this.env = 'https://sandbox.moip.com.br/v2';
         }
     }
     Moip.prototype.js = function () {
@@ -60,10 +75,10 @@ var Moip = (function () {
         var _this = this;
         return new Bluebird(function (resolve, reject) {
             switch (method) {
-                case 2 /* del */:
-                case 0 /* get */:
-                case 1 /* put */:
-                case 3 /* post */:
+                case IMoipMethod.del:
+                case IMoipMethod.get:
+                case IMoipMethod.put:
+                case IMoipMethod.post:
                     request({
                         method: IMoipMethod[method],
                         url: _this.env + uri,
@@ -85,10 +100,10 @@ var Moip = (function () {
                         }
                         else if (body.ERROR) {
                             reject(new MoipError([{
-                                code: '?',
-                                path: '?',
-                                description: body.ERROR
-                            }], response.statusCode));
+                                    code: '?',
+                                    path: '?',
+                                    description: body.ERROR
+                                }], response.statusCode));
                         }
                         else {
                             reject(new Error(body));
@@ -101,22 +116,22 @@ var Moip = (function () {
         }).bind(this);
     };
     Moip.prototype.createCustomer = function (customer) {
-        return this._request(3 /* post */, '/customers', customer);
+        return this._request(IMoipMethod.post, '/customers', customer);
     };
     Moip.prototype.getCustomer = function (customerId) {
-        return this._request(0 /* get */, '/customers/' + customerId, {});
+        return this._request(IMoipMethod.get, '/customers/' + customerId, {});
     };
     Moip.prototype.createOrder = function (order) {
-        return this._request(3 /* post */, '/orders', order);
+        return this._request(IMoipMethod.post, '/orders', order);
     };
     Moip.prototype.getOrder = function (orderId) {
-        return this._request(0 /* get */, '/orders/' + orderId, {});
+        return this._request(IMoipMethod.get, '/orders/' + orderId, {});
     };
     Moip.prototype.createPayment = function (payment, orderId) {
-        return this._request(3 /* post */, '/orders/' + orderId + '/payments', payment);
+        return this._request(IMoipMethod.post, '/orders/' + orderId + '/payments', payment);
     };
     Moip.prototype.getPayment = function (paymentId) {
-        return this._request(0 /* get */, '/payments/' + paymentId, {});
+        return this._request(IMoipMethod.get, '/payments/' + paymentId, {});
     };
     Moip.JS = {
         dev: '//assets.moip.com.br/integration/moip.min.js',

@@ -1,9 +1,7 @@
-/// <reference path="typings/bluebird/bluebird.d.ts" />
-/// <reference path="typings/node/node.d.ts" />
+/// <reference path="typings/tsd.d.ts" />
 
 declare module '@pocesar/moip2' {
     import Bluebird = require('bluebird');
-
     export interface IMoipCustomError extends Error {
         errors: IMoipError[];
         code: number;
@@ -46,15 +44,16 @@ declare module '@pocesar/moip2' {
     }
     export interface IMoipCustomerResponse extends IMoipResponse<IMoipLinks>, IMoipCustomer {
     }
+    export interface IMoipCheckoutLinks {
+        payOnlineBankDebitItau?: IMoipHATEOAS;
+        payOnlineBankDebitBB?: IMoipHATEOAS;
+        payCreditCard?: IMoipHATEOAS;
+        payOnlineBankDebitBradesco?: IMoipHATEOAS;
+        payBoleto?: IMoipHATEOAS;
+        payOnlineBankDebitBanrisul?: IMoipHATEOAS;
+    }
     export interface IMoipOrderLinks extends IMoipLinks {
-        checkout: {
-            payOnlineBankDebitItau?: IMoipHATEOAS;
-            payOnlineBankDebitBB?: IMoipHATEOAS;
-            payCreditCard?: IMoipHATEOAS;
-            payOnlineBankDebitBradesco?: IMoipHATEOAS;
-            payBoleto?: IMoipHATEOAS;
-            payOnlineBankDebitBanrisul?: IMoipHATEOAS;
-        };
+        checkout: IMoipCheckoutLinks;
     }
     export interface IMoipEvents {
         events: IMoipEvent[];
@@ -68,8 +67,9 @@ declare module '@pocesar/moip2' {
         receivers: IMoipReceiver[];
         shippingAddress: IMoipShippingAddress;
     }
-    export interface IMoipPaymentLinks extends IMoipOrderLinks {
+    export interface IMoipPaymentLinks extends IMoipCheckoutLinks {
         order: IMoipHATEOAS;
+        checkout: IMoipCheckoutLinks;
     }
     export interface IMoipFee {
         type: string;
@@ -79,6 +79,41 @@ declare module '@pocesar/moip2' {
         status: string;
         fees: IMoipFee[];
         fundingInstrument: IMoipFundingInstrument;
+    }
+    export enum IMoipOrderStatus {
+        CREATED,
+        WAITING,
+        PAID,
+        NOT_PAID,
+        REVERTED,
+    }
+    export enum IMoipPaymentStatus {
+        WAITING,
+        AUTHORIZED,
+        IN_ANALYSIS,
+        CANCELLED,
+        REFUNDED,
+    }
+    export interface IMoipEventResourceBase extends IMoipEvents {
+        id: string;
+        amount: IMoipAmount;
+        createdAt: string;
+        updatedAt: string;
+    }
+    export interface IMoipEventResourceOrder extends IMoipEventResourceBase {
+        status: IMoipOrderStatus;
+    }
+    export interface IMoipEventResourcePayment extends IMoipEventResourceBase, IMoipFundingInstrumentCreditCard {
+        status: IMoipPaymentStatus;
+    }
+    export interface IMoipEventResource {
+        order?: IMoipEventResourceOrder;
+        payment?: IMoipEventResourcePayment;
+    }
+    export interface IMoipWebhook {
+        event?: string;
+        createdAt?: string;
+        resource?: IMoipEventResource;
     }
     export interface IMoipEvent {
         createdAt: string;
@@ -214,4 +249,3 @@ declare module '@pocesar/moip2' {
         getPayment(paymentId: string): Bluebird<IMoipPaymentResponse>;
     }
 }
-
