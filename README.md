@@ -1,6 +1,6 @@
 # Moip 2
 
-Typescript para Moip API 2.0
+Typescript Moip API 2.0 para Node.js
 
 ## Install
 
@@ -8,21 +8,14 @@ Typescript para Moip API 2.0
 $ npm install @pocesar/moip2 --save
 ```
 
-## Typescript
-
-```typescript
-/* typings especificos do MOIP */
-/// <reference path="node_modules/@pocesar/moip2/moip.d.ts" />
-```
-
 ## Usage
 
 ```js
 var Moip = require('@pocesar/moip2').Moip;
 
-var instance = new Moip('token', 'chave', true);
+var moip = new Moip('token', 'chave', true);
 
-instance.createCustomer({
+moip.createCustomer({
     birthDate: '0000-00-00',
     email: 'email@example.com',
     fullname: 'Full Name',
@@ -82,7 +75,7 @@ instance.createCustomer({
     console.log('Sucesso!', payment);
 }).catch('MoipError', function(err){
     err.errors.forEach(function(e){
-        e.code + e.path + e.description;
+        console.log(e.code + ' > ' + e.path + ' > ' + e.description);
     });
 }).catch(console.error.bind(console));
 ```

@@ -1,251 +1,248 @@
-/// <reference path="typings/tsd.d.ts" />
-
-declare module '@pocesar/moip2' {
-    import Bluebird = require('bluebird');
-    export interface IMoipCustomError extends Error {
-        errors: IMoipError[];
-        code: number;
-    }
-    export class MoipError implements IMoipCustomError {
-        errors: IMoipError[];
-        code: number;
-        name: string;
-        message: string;
-        constructor(errors: IMoipError[], code: number);
-    }
-    export enum IMoipMethod {
-        get = 0,
-        put = 1,
-        del = 2,
-        post = 3,
-    }
-    export interface IMoipError {
-        code: string;
-        path: string;
-        description: string;
-    }
-    export interface IMoipHATEOAS {
-        title?: string;
-        href?: string;
-        redirectHref?: string;
-    }
-    export interface IMoipLinks {
-        [index: string]: IMoipHATEOAS | {
-            [index: string]: IMoipHATEOAS;
-        };
-        self: IMoipHATEOAS;
-    }
-    export interface IMoipResponse<T> {
+import * as Bluebird from 'bluebird';
+export interface IMoipCustomError extends Error {
+    errors: IMoipError[];
+    code: number;
+}
+export declare class MoipError extends Error implements IMoipCustomError {
+    errors: IMoipError[];
+    code: number;
+    name: string;
+    message: string;
+    constructor(errors: IMoipError[], code: number);
+}
+export declare enum RequestMethod {
+    get = 0,
+    put = 1,
+    delete = 2,
+    post = 3,
+}
+export interface IMoipError {
+    code: string;
+    path: string;
+    description: string;
+}
+export interface Webhook {
+    events: string[];
+    target: string;
+    media: string;
+}
+export interface WebhookResponse extends Webhook {
+    token: string;
+    id: string;
+}
+export interface HATEOAS {
+    title?: string;
+    href?: string;
+    redirectHref?: string;
+}
+export interface Links {
+    [index: string]: HATEOAS | {
+        [index: string]: HATEOAS;
+    };
+    self: HATEOAS;
+}
+export interface Response<T> {
+    id: string;
+    ownId: string;
+    createdAt?: string;
+    updatedAt?: string;
+    _links?: T;
+}
+export interface CustomerResponse extends Response<Links>, Customer {
+}
+export interface CheckoutLinks {
+    payOnlineBankDebitItau?: HATEOAS;
+    payOnlineBankDebitBB?: HATEOAS;
+    payCreditCard?: HATEOAS;
+    payOnlineBankDebitBradesco?: HATEOAS;
+    payBoleto?: HATEOAS;
+    payOnlineBankDebitBanrisul?: HATEOAS;
+}
+export interface OrderLinks extends Links {
+    checkout: CheckoutLinks;
+}
+export interface Events {
+    events: Event[];
+}
+export interface OrderResponse extends Response<OrderLinks>, Order, Events {
+    status: string;
+    amount: OrderAmount;
+    payments: any[];
+    refunds: any[];
+    entries: any[];
+    receivers: Receiver[];
+    shippingAddress: ShippingAddress;
+}
+export interface PaymentLinks extends CheckoutLinks {
+    order: HATEOAS;
+    checkout: CheckoutLinks;
+}
+export interface Fee {
+    type: string;
+    amount: number;
+}
+export declare type PaymentResponseType = 'TRANSACTION' | 'PRE_PAYMENT';
+export interface PaymentResponse extends Response<PaymentLinks>, Payment, Events {
+    status: string;
+    type: PaymentResponseType;
+    fees: Fee[];
+    fundingInstrument: FundingInstrument;
+}
+export declare type OrderStatus = 'CREATED' | 'WAITING' | 'PAID' | 'NOT_PAID' | 'REVERTED';
+export declare type PaymentStatus = 'CREATED' | 'WAITING' | 'IN_ANALYSIS' | 'PRE_AUTHORIZED' | 'AUTHORIZED' | 'CANCELLED' | 'REFUNDED' | 'REVERSED' | 'SETTLED';
+export interface EventResourceBase extends Events {
+    id: string;
+    amount: Amount;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface EventResourceOrder extends EventResourceBase {
+    status: OrderStatus;
+}
+export interface EventResourcePayment extends EventResourceBase, FundingInstrumentCreditCard {
+    status: PaymentStatus;
+}
+export interface EventResource {
+    order?: EventResourceOrder;
+    payment?: EventResourcePayment;
+}
+export interface Event {
+    createdAt: string;
+    description: string;
+    type: string;
+}
+export interface Receiver {
+    amount: {
+        fixed?: number;
+        percentual?: number;
+        fees?: number;
+        refunds?: number;
+        total?: number;
+    };
+    moipAccount: {
+        fullname?: string;
+        login?: string;
         id: string;
-        ownId: string;
-        createdAt?: string;
-        updatedAt?: string;
-        _links?: T;
-    }
-    export interface IMoipCustomerResponse extends IMoipResponse<IMoipLinks>, IMoipCustomer {
-    }
-    export interface IMoipCheckoutLinks {
-        payOnlineBankDebitItau?: IMoipHATEOAS;
-        payOnlineBankDebitBB?: IMoipHATEOAS;
-        payCreditCard?: IMoipHATEOAS;
-        payOnlineBankDebitBradesco?: IMoipHATEOAS;
-        payBoleto?: IMoipHATEOAS;
-        payOnlineBankDebitBanrisul?: IMoipHATEOAS;
-    }
-    export interface IMoipOrderLinks extends IMoipLinks {
-        checkout: IMoipCheckoutLinks;
-    }
-    export interface IMoipEvents {
-        events: IMoipEvent[];
-    }
-    export interface IMoipOrderResponse extends IMoipResponse<IMoipOrderLinks>, IMoipOrder, IMoipEvents {
-        status: string;
-        amount: IMoipOrderAmount;
-        payments: any[];
-        refunds: any[];
-        entries: any[];
-        receivers: IMoipReceiver[];
-        shippingAddress: IMoipShippingAddress;
-    }
-    export interface IMoipPaymentLinks extends IMoipCheckoutLinks {
-        order: IMoipHATEOAS;
-        checkout: IMoipCheckoutLinks;
-    }
-    export interface IMoipFee {
-        type: string;
-        amount: number;
-    }
-    export interface IMoipPaymentResponse extends IMoipResponse<IMoipPaymentLinks>, IMoipPayment, IMoipEvents {
-        status: string;
-        fees: IMoipFee[];
-        fundingInstrument: IMoipFundingInstrument;
-    }
-    export enum IMoipOrderStatus {
-        CREATED,
-        WAITING,
-        PAID,
-        NOT_PAID,
-        REVERTED,
-    }
-    export enum IMoipPaymentStatus {
-        WAITING,
-        AUTHORIZED,
-        IN_ANALYSIS,
-        CANCELLED,
-        REFUNDED,
-    }
-    export interface IMoipEventResourceBase extends IMoipEvents {
-        id: string;
-        amount: IMoipAmount;
-        createdAt: string;
-        updatedAt: string;
-    }
-    export interface IMoipEventResourceOrder extends IMoipEventResourceBase {
-        status: IMoipOrderStatus;
-    }
-    export interface IMoipEventResourcePayment extends IMoipEventResourceBase, IMoipFundingInstrumentCreditCard {
-        status: IMoipPaymentStatus;
-    }
-    export interface IMoipEventResource {
-        order?: IMoipEventResourceOrder;
-        payment?: IMoipEventResourcePayment;
-    }
-    export interface IMoipWebhook {
-        event?: string;
-        createdAt?: string;
-        resource?: IMoipEventResource;
-    }
-    export interface IMoipEvent {
-        createdAt: string;
-        description: string;
-        type: string;
-    }
-    export interface IMoipReceiver {
-        amount: {
-            fees: number;
-            refunds: number;
-            total: number;
-        };
-        moipAccount: {
-            fullname: string;
-            login: string;
-            id: string;
-        };
-        type: string;
-    }
-    export interface IMoipFundingInstrumentCreditCardHolder {
-        fullname: string;
-        birthDate: string;
-        taxDocument: IMoipTaxDocument;
-        phone: IMoipPhone;
-    }
-    export interface IMoipFundingInstrumentBoleto {
-        expirationDate: string;
-        instructionLines: {
-            first: string;
-            second: string;
-            third: string;
-        };
-        logoUri?: string;
-        lineCode?: string;
-    }
-    export interface IMoipFundingInstrumentDebit {
-        bankNumber: string;
-        expirationDate: string;
-        returnUri: string;
-    }
-    export interface IMoipFundingInstrumentCreditCard {
-        hash: string;
-        holder: IMoipFundingInstrumentCreditCardHolder;
-    }
-    export enum IMoipPaymentMethod {
-        ONLINE_BANK_DEBIT,
-        BOLETO,
-        CREDIT_CARD,
-    }
-    export interface IMoipFundingInstrument {
-        method: IMoipPaymentMethod;
-        creditCard?: IMoipFundingInstrumentCreditCard;
-        boleto?: IMoipFundingInstrumentBoleto;
-        onlineBankDebit?: IMoipFundingInstrumentDebit;
-    }
-    export interface IMoipPayment {
-        installmentCount?: number;
-        fundingInstrument: IMoipFundingInstrument;
-    }
-    export interface IMoipPhone {
-        countryCode: string;
-        areaCode: string;
-        number: string;
-    }
-    export interface IMoipTaxDocument {
-        type: string;
-        number: string;
-    }
-    export interface IMoipShippingAddress {
-        city: string;
-        complement: string;
-        district: string;
-        street: string;
-        streetNumber: string;
-        zipCode: string;
-        state: string;
-        country: string;
-    }
-    export interface IMoipCustomer {
-        ownId: string;
-        fullname: string;
-        email: string;
-        birthDate: string;
-        taxDocument: IMoipTaxDocument;
-        phone: IMoipPhone;
-        shippingAddress: IMoipShippingAddress;
-    }
-    export interface IMoipSubtotals {
-        shipping?: number;
-        addition?: number;
-        discount?: number;
-        items?: number;
-    }
-    export interface IMoipAmount {
-        currency: string;
-        subtotals: IMoipSubtotals;
-    }
-    export interface IMoipOrderAmount extends IMoipAmount {
-        total: number;
-        fees: number;
-        refunds: number;
-        liquid: number;
-        otherReceivers: number;
-    }
-    export interface IMoipItem {
-        product: string;
-        quantity: number;
-        detail: string;
-        price: number;
-    }
-    export interface IMoipOrder {
-        ownId: string;
-        amount: IMoipAmount;
-        items: IMoipItem[];
-        customer: IMoipCustomer;
-    }
-    export class Moip {
-        static JS: {
-            dev: string;
-            prod: string;
-        };
-        private auth;
-        production: boolean;
-        private env;
-        constructor(token: string, key: string, production?: boolean);
-        js(): string;
-        private _request<T>(method, uri, data);
-        createCustomer(customer: IMoipCustomer): Bluebird<IMoipCustomerResponse>;
-        getCustomer(customerId: string): Bluebird<IMoipCustomerResponse>;
-        createOrder(order: IMoipOrder): Bluebird<IMoipOrderResponse>;
-        getOrder(orderId: string): Bluebird<IMoipOrderResponse>;
-        createPayment(payment: IMoipPayment, orderId: string): Bluebird<IMoipPaymentResponse>;
-        getPayment(paymentId: string): Bluebird<IMoipPaymentResponse>;
-    }
+    };
+    type: string;
+}
+export interface FundingInstrumentCreditCardHolder {
+    fullname: string;
+    birthDate: string;
+    taxDocument: TaxDocument;
+    phone: Phone;
+}
+export interface FundingInstrumentBoleto {
+    expirationDate: string;
+    instructionLines: {
+        first: string;
+        second: string;
+        third: string;
+    };
+    logoUri?: string;
+    lineCode?: string;
+}
+export interface FundingInstrumentDebit {
+    bankNumber: '001' | '237' | '341' | '041';
+    expirationDate: string;
+    returnUri: string;
+}
+export interface FundingInstrumentCreditCard {
+    hash: string;
+    holder: FundingInstrumentCreditCardHolder;
+}
+export declare type PaymentMethod = 'CREDIT_CARD' | 'BOLETO' | 'ONLINE_DEBIT' | 'WALLET';
+export interface FundingInstrument {
+    method: PaymentMethod;
+    creditCard?: FundingInstrumentCreditCard;
+    boleto?: FundingInstrumentBoleto;
+    onlineDebit?: FundingInstrumentDebit;
+}
+export interface Payment {
+    installmentCount?: number;
+    fundingInstrument: FundingInstrument;
+    delayCapture?: boolean;
+}
+export interface Phone {
+    countryCode: '55';
+    areaCode: string;
+    number: string;
+}
+export interface TaxDocument {
+    type?: 'CPF' | 'CNPJ';
+    number?: string;
+}
+export interface ShippingAddress {
+    city: string;
+    complement: string;
+    district: string;
+    street: string;
+    streetNumber: string;
+    zipCode: string;
+    state: string;
+    country: string;
+}
+export interface Customer {
+    ownId: string;
+    fullname: string;
+    email: string;
+    birthDate?: string;
+    taxDocument: TaxDocument;
+    phone: Phone;
+    shippingAddress?: ShippingAddress;
+}
+export interface Subtotals {
+    shipping?: number;
+    addition?: number;
+    discount?: number;
+}
+export interface Amount {
+    currency: 'BRL';
+    subtotals: Subtotals;
+}
+export interface OrderAmount extends Amount {
+    total: number;
+    fees: number;
+    refunds: number;
+    liquid: number;
+    otherReceivers: number;
+}
+export interface Item {
+    /** Nome do produto */
+    product: string;
+    /** Quantidade */
+    quantity: number;
+    /** Detalhes */
+    detail?: string;
+    /** Centavos */
+    price: number;
+}
+export interface Order {
+    /** ID próprio */
+    ownId: string;
+    amount: Amount;
+    items: Item[];
+    customer: string | Customer;
+    receivers: Receiver[];
+}
+export declare class Moip {
+    static JS: {
+        dev: string;
+        prod: string;
+    };
+    private auth;
+    production: boolean;
+    private env;
+    constructor(token: string, key: string, production?: boolean);
+    js(): string;
+    private _request<T>(method, uri, data);
+    createCustomer(customer: Customer): Bluebird<CustomerResponse>;
+    getCustomer(customerId: string): Bluebird<CustomerResponse>;
+    createOrder(order: Order): Bluebird<OrderResponse>;
+    getOrder(orderId: string): Bluebird<OrderResponse>;
+    createPayment(payment: Payment, orderId: string): Bluebird<PaymentResponse>;
+    getPayment(paymentId: string): Bluebird<PaymentResponse>;
+    setNotification(events: string[], endpoint: string): Bluebird<WebhookResponse>;
+    deleteNotification(id: string): Bluebird<{}>;
+    getNotifications(): Bluebird<WebhookResponse[]>;
 }

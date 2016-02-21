@@ -1,15 +1,16 @@
 {
-  "compilerOptions": {
-    "module": "commonjs",
-    "noImplicitAny": true,
-    "removeComments": true,
-    "preserveConstEnums": true,
-    "sourceMap": true,
-    "target": "es5",
-    "declaration": true
-  },
-  "files":[
-      "typings/tsd.d.ts",
-      "./moip.ts"
-  ]
+    "compilerOptions": {
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "removeComments": false,
+        "preserveConstEnums": true,
+        "sourceMap": false,
+        "outDir": ".",
+        "target": "es5",
+        "declaration": true
+    },
+    "files": [
+        "typings/tsd.d.ts",
+        "moip.ts"
+    ]
 }

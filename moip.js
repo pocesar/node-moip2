@@ -1,16 +1,22 @@
 'use strict';
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var request = require('request');
 var Bluebird = require('bluebird');
-var util = require('util');
-var MoipError = (function () {
+var MoipError = (function (_super) {
+    __extends(MoipError, _super);
     function MoipError(errors, code) {
+        _super.call(this);
         this.errors = errors;
         this.code = code;
         var err = Error;
         err.captureStackTrace(this, MoipError);
         this.name = 'MoipError';
         var errStrs = [];
-        if (typeof errors === 'object') {
+        if (typeof errors === 'object' && errors.length) {
             this.errors.forEach(function (error) {
                 errStrs.push(error.code + " [" + error.path + "]: " + error.description);
             });
@@ -18,41 +24,22 @@ var MoipError = (function () {
         else {
             this.errors = [this.errors];
         }
-        this.message = errStrs.join("\n");
+        this.message = errStrs.join("\n") || ('' + this.errors);
     }
     return MoipError;
-})();
+}(Error));
 exports.MoipError = MoipError;
-util.inherits(MoipError, Error);
-(function (IMoipMethod) {
-    IMoipMethod[IMoipMethod["get"] = 0] = "get";
-    IMoipMethod[IMoipMethod["put"] = 1] = "put";
-    IMoipMethod[IMoipMethod["del"] = 2] = "del";
-    IMoipMethod[IMoipMethod["post"] = 3] = "post";
-})(exports.IMoipMethod || (exports.IMoipMethod = {}));
-var IMoipMethod = exports.IMoipMethod;
-(function (IMoipOrderStatus) {
-    IMoipOrderStatus[IMoipOrderStatus["CREATED"] = 'CREATED'] = "CREATED";
-    IMoipOrderStatus[IMoipOrderStatus["WAITING"] = 'WAITING'] = "WAITING";
-    IMoipOrderStatus[IMoipOrderStatus["PAID"] = 'PAID'] = "PAID";
-    IMoipOrderStatus[IMoipOrderStatus["NOT_PAID"] = 'NOT_PAID'] = "NOT_PAID";
-    IMoipOrderStatus[IMoipOrderStatus["REVERTED"] = 'REVERTED'] = "REVERTED";
-})(exports.IMoipOrderStatus || (exports.IMoipOrderStatus = {}));
-var IMoipOrderStatus = exports.IMoipOrderStatus;
-(function (IMoipPaymentStatus) {
-    IMoipPaymentStatus[IMoipPaymentStatus["WAITING"] = 'WAITING'] = "WAITING";
-    IMoipPaymentStatus[IMoipPaymentStatus["AUTHORIZED"] = 'AUTHORIZED'] = "AUTHORIZED";
-    IMoipPaymentStatus[IMoipPaymentStatus["IN_ANALYSIS"] = 'IN_ANALYSIS'] = "IN_ANALYSIS";
-    IMoipPaymentStatus[IMoipPaymentStatus["CANCELLED"] = 'CANCELLED'] = "CANCELLED";
-    IMoipPaymentStatus[IMoipPaymentStatus["REFUNDED"] = 'REFUNDED'] = "REFUNDED";
-})(exports.IMoipPaymentStatus || (exports.IMoipPaymentStatus = {}));
-var IMoipPaymentStatus = exports.IMoipPaymentStatus;
-(function (IMoipPaymentMethod) {
-    IMoipPaymentMethod[IMoipPaymentMethod["ONLINE_BANK_DEBIT"] = 'ONLINE_BANK_DEBIT'] = "ONLINE_BANK_DEBIT";
-    IMoipPaymentMethod[IMoipPaymentMethod["BOLETO"] = 'BOLETO'] = "BOLETO";
-    IMoipPaymentMethod[IMoipPaymentMethod["CREDIT_CARD"] = 'CREDIT_CARD'] = "CREDIT_CARD";
-})(exports.IMoipPaymentMethod || (exports.IMoipPaymentMethod = {}));
-var IMoipPaymentMethod = exports.IMoipPaymentMethod;
+Object.defineProperty(MoipError.prototype, 'constructor', {
+    value: MoipError,
+    configurable: true
+});
+(function (RequestMethod) {
+    RequestMethod[RequestMethod["get"] = 0] = "get";
+    RequestMethod[RequestMethod["put"] = 1] = "put";
+    RequestMethod[RequestMethod["delete"] = 2] = "delete";
+    RequestMethod[RequestMethod["post"] = 3] = "post";
+})(exports.RequestMethod || (exports.RequestMethod = {}));
+var RequestMethod = exports.RequestMethod;
 var Moip = (function () {
     function Moip(token, key, production) {
         if (production === void 0) { production = false; }
@@ -75,13 +62,13 @@ var Moip = (function () {
         var _this = this;
         return new Bluebird(function (resolve, reject) {
             switch (method) {
-                case IMoipMethod.del:
-                case IMoipMethod.get:
-                case IMoipMethod.put:
-                case IMoipMethod.post:
+                case RequestMethod.delete:
+                case RequestMethod.get:
+                case RequestMethod.put:
+                case RequestMethod.post:
                     request({
-                        method: IMoipMethod[method],
-                        url: _this.env + uri,
+                        method: RequestMethod[method],
+                        url: _this.env + String(uri),
                         strictSSL: true,
                         json: true,
                         body: data,
@@ -89,16 +76,17 @@ var Moip = (function () {
                             Authorization: _this.auth
                         }
                     }, function (error, response, body) {
+                        console.error(method, RequestMethod[method], _this.env + String(uri), error, data, _this.auth, response, body);
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);
                         }
-                        else if (body.errors) {
+                        else if (body && body.errors && body.errors.length) {
                             reject(new MoipError(body.errors, response.statusCode));
                         }
                         else if (error) {
-                            reject(error);
+                            reject(error instanceof Error ? error : new Error(error));
                         }
-                        else if (body.ERROR) {
+                        else if (body && body.ERROR) {
                             reject(new MoipError([{
                                     code: '?',
                                     path: '?',
@@ -106,7 +94,7 @@ var Moip = (function () {
                                 }], response.statusCode));
                         }
                         else {
-                            reject(new Error(body));
+                            reject(new Error(body ? body : response.statusCode));
                         }
                     });
                     break;
@@ -116,27 +104,41 @@ var Moip = (function () {
         }).bind(this);
     };
     Moip.prototype.createCustomer = function (customer) {
-        return this._request(IMoipMethod.post, '/customers', customer);
+        return this._request(RequestMethod.post, '/customers', customer);
     };
     Moip.prototype.getCustomer = function (customerId) {
-        return this._request(IMoipMethod.get, '/customers/' + customerId, {});
+        return this._request(RequestMethod.get, "/customers/" + customerId, {});
     };
     Moip.prototype.createOrder = function (order) {
-        return this._request(IMoipMethod.post, '/orders', order);
+        return this._request(RequestMethod.post, '/orders', order);
     };
     Moip.prototype.getOrder = function (orderId) {
-        return this._request(IMoipMethod.get, '/orders/' + orderId, {});
+        return this._request(RequestMethod.get, "/orders/" + orderId, {});
     };
     Moip.prototype.createPayment = function (payment, orderId) {
-        return this._request(IMoipMethod.post, '/orders/' + orderId + '/payments', payment);
+        return this._request(RequestMethod.post, "/orders/" + orderId + "/payments", payment);
     };
     Moip.prototype.getPayment = function (paymentId) {
-        return this._request(IMoipMethod.get, '/payments/' + paymentId, {});
+        return this._request(RequestMethod.get, "/payments/" + paymentId, {});
+    };
+    Moip.prototype.setNotification = function (events, endpoint) {
+        var Request = {
+            events: events,
+            media: 'WEBHOOK',
+            target: endpoint
+        };
+        return this._request(RequestMethod.post, '/preferences/notifications', Request);
+    };
+    Moip.prototype.deleteNotification = function (id) {
+        return this._request(RequestMethod.delete, "/preferences/notifications/" + id, {});
+    };
+    Moip.prototype.getNotifications = function () {
+        return this._request(RequestMethod.get, '/preferences/notifications', {});
     };
     Moip.JS = {
         dev: '//assets.moip.com.br/integration/moip.min.js',
         prod: '//assets.moip.com.br/integration/moip.min.js'
     };
     return Moip;
-})();
+}());
 exports.Moip = Moip;

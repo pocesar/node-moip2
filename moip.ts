@@ -1,27 +1,27 @@
 'use strict';
 
-import crypto = require('crypto');
-import request = require('request');
-import Bluebird = require('bluebird');
-import util = require('util');
+import * as request from 'request';
+import * as Bluebird from 'bluebird';
 
 export interface IMoipCustomError extends Error {
     errors: IMoipError[];
     code: number;
 }
 
-export class MoipError implements IMoipCustomError {
+export class MoipError extends Error implements IMoipCustomError {
     public name: string;
     public message: string;
 
     constructor(public errors: IMoipError[], public code: number) {
+        super();
+
         var err: any = Error;
         err.captureStackTrace(this, MoipError);
         this.name = 'MoipError';
 
         var errStrs: string[] = [];
 
-        if (typeof errors === 'object') {
+        if (typeof errors === 'object' && errors.length) {
 
             this.errors.forEach((error) => {
                 errStrs.push(`${error.code} [${error.path}]: ${error.description}`);
@@ -31,16 +31,19 @@ export class MoipError implements IMoipCustomError {
             this.errors = <any>[this.errors];
         }
 
-        this.message = errStrs.join("\n");
+        this.message = errStrs.join("\n") || ('' + this.errors);
     }
 }
 
-util.inherits(MoipError, Error);
+Object.defineProperty(MoipError.prototype, 'constructor', {
+    value: MoipError,
+    configurable: true
+});
 
-export enum IMoipMethod {
+export enum RequestMethod {
     get,
     put,
-    del,
+    delete,
     post
 }
 
@@ -50,18 +53,29 @@ export interface IMoipError {
     description: string;
 }
 
-export interface IMoipHATEOAS {
+export interface Webhook {
+    events: string[];
+    target: string;
+    media: string;
+}
+
+export interface WebhookResponse extends Webhook {
+    token: string;
+    id: string;
+}
+
+export interface HATEOAS {
     title?: string;
     href?: string;
     redirectHref?: string;
 }
 
-export interface IMoipLinks {
-    [index: string]: IMoipHATEOAS|{[index: string]: IMoipHATEOAS};
-    self: IMoipHATEOAS;
+export interface Links {
+    [index: string]: HATEOAS | { [index: string]: HATEOAS };
+    self: HATEOAS;
 }
 
-export interface IMoipResponse<T> {
+export interface Response<T> {
     id: string;
     ownId: string;
     createdAt?: string;
@@ -69,124 +83,110 @@ export interface IMoipResponse<T> {
     _links?: T;
 }
 
-export interface IMoipCustomerResponse extends IMoipResponse<IMoipLinks>, IMoipCustomer {
+export interface CustomerResponse extends Response<Links>, Customer {
 
 }
 
-export interface IMoipCheckoutLinks {
-    payOnlineBankDebitItau?: IMoipHATEOAS;
-    payOnlineBankDebitBB?: IMoipHATEOAS;
-    payCreditCard?: IMoipHATEOAS;
-    payOnlineBankDebitBradesco?: IMoipHATEOAS;
-    payBoleto?: IMoipHATEOAS;
-    payOnlineBankDebitBanrisul?: IMoipHATEOAS;
+export interface CheckoutLinks {
+    payOnlineBankDebitItau?: HATEOAS;
+    payOnlineBankDebitBB?: HATEOAS;
+    payCreditCard?: HATEOAS;
+    payOnlineBankDebitBradesco?: HATEOAS;
+    payBoleto?: HATEOAS;
+    payOnlineBankDebitBanrisul?: HATEOAS;
 }
 
-export interface IMoipOrderLinks extends IMoipLinks {
-    checkout: IMoipCheckoutLinks;
+export interface OrderLinks extends Links {
+    checkout: CheckoutLinks;
 }
 
-export interface IMoipEvents {
-    events: IMoipEvent[];
+export interface Events {
+    events: Event[];
 }
 
-export interface IMoipOrderResponse extends IMoipResponse<IMoipOrderLinks>, IMoipOrder, IMoipEvents {
+export interface OrderResponse extends Response<OrderLinks>, Order, Events {
     status: string;
-    amount: IMoipOrderAmount;
+    amount: OrderAmount;
     payments: any[];
     refunds: any[];
     entries: any[];
-    receivers: IMoipReceiver[];
-    shippingAddress: IMoipShippingAddress;
+    receivers: Receiver[];
+    shippingAddress: ShippingAddress;
 }
 
-export interface IMoipPaymentLinks extends IMoipCheckoutLinks {
-    order: IMoipHATEOAS;
-    checkout: IMoipCheckoutLinks;
+export interface PaymentLinks extends CheckoutLinks {
+    order: HATEOAS;
+    checkout: CheckoutLinks;
 }
 
-export interface IMoipFee {
+export interface Fee {
     type: string;
     amount: number;
 }
 
-export interface IMoipPaymentResponse extends IMoipResponse<IMoipPaymentLinks>, IMoipPayment, IMoipEvents {
+export type PaymentResponseType = 'TRANSACTION' | 'PRE_PAYMENT';
+
+export interface PaymentResponse extends Response<PaymentLinks>, Payment, Events {
     status: string;
-    fees: IMoipFee[];
-    fundingInstrument: IMoipFundingInstrument;
+    type: PaymentResponseType;
+    fees: Fee[];
+    fundingInstrument: FundingInstrument;
 }
 
-export enum IMoipOrderStatus {
-    CREATED=<any>'CREATED',
-    WAITING=<any>'WAITING',
-    PAID=<any>'PAID',
-    NOT_PAID=<any>'NOT_PAID',
-    REVERTED=<any>'REVERTED'
-}
+export type OrderStatus = 'CREATED' | 'WAITING' | 'PAID' | 'NOT_PAID' | 'REVERTED';
+export type PaymentStatus = 'CREATED' | 'WAITING' | 'IN_ANALYSIS' | 'PRE_AUTHORIZED' | 'AUTHORIZED' | 'CANCELLED' | 'REFUNDED' | 'REVERSED' | 'SETTLED';
 
-export enum IMoipPaymentStatus {
-    WAITING = <any>'WAITING',
-    AUTHORIZED = <any>'AUTHORIZED',
-    IN_ANALYSIS = <any>'IN_ANALYSIS',
-    CANCELLED = <any>'CANCELLED',
-    REFUNDED = <any>'REFUNDED'
-}
-
-export interface IMoipEventResourceBase extends IMoipEvents {
+export interface EventResourceBase extends Events {
     id: string;
-    amount: IMoipAmount;
+    amount: Amount;
     createdAt: string;
     updatedAt: string;
 }
 
-export interface IMoipEventResourceOrder extends IMoipEventResourceBase {
-    status: IMoipOrderStatus;
+export interface EventResourceOrder extends EventResourceBase {
+    status: OrderStatus;
 }
 
-export interface IMoipEventResourcePayment extends IMoipEventResourceBase, IMoipFundingInstrumentCreditCard {
-    status: IMoipPaymentStatus;
+export interface EventResourcePayment extends EventResourceBase, FundingInstrumentCreditCard {
+    status: PaymentStatus;
 }
 
-export interface IMoipEventResource {
-    order?: IMoipEventResourceOrder;
-    payment?: IMoipEventResourcePayment;
+export interface EventResource {
+    order?: EventResourceOrder;
+    payment?: EventResourcePayment;
 }
 
-export interface IMoipWebhook {
-    event?: string;
-    createdAt?: string;
-    resource?: IMoipEventResource;
-}
-
-export interface IMoipEvent {
+export interface Event {
     createdAt: string;
     description: string;
     type: string;
 }
 
-export interface IMoipReceiver {
+export interface Receiver {
     amount: {
-        fees: number;
-        refunds: number;
-        total: number;
+        fixed?: number;
+        percentual?: number;
+        fees?: number;
+        refunds?: number;
+        total?: number;
     };
     moipAccount: {
-        fullname: string;
-        login: string;
+        fullname?: string;
+        login?: string;
         id: string;
     };
     type: string;
 }
 
 
-export interface IMoipFundingInstrumentCreditCardHolder {
+export interface FundingInstrumentCreditCardHolder {
     fullname: string;
     birthDate: string;
-    taxDocument: IMoipTaxDocument;
-    phone: IMoipPhone;
+    taxDocument: TaxDocument;
+    phone: Phone;
 }
 
-export interface IMoipFundingInstrumentBoleto {
+export interface FundingInstrumentBoleto {
     expirationDate: string;
     instructionLines: {
         first: string;
@@ -197,47 +197,44 @@ export interface IMoipFundingInstrumentBoleto {
     lineCode?: string;
 }
 
-export interface IMoipFundingInstrumentDebit {
-    bankNumber: string;
+export interface FundingInstrumentDebit {
+    bankNumber: '001' | '237' | '341' | '041';
     expirationDate: string;
     returnUri: string;
 }
 
-export interface IMoipFundingInstrumentCreditCard {
+export interface FundingInstrumentCreditCard {
     hash: string;
-    holder: IMoipFundingInstrumentCreditCardHolder;
+    holder: FundingInstrumentCreditCardHolder;
 }
 
-export enum IMoipPaymentMethod {
-    ONLINE_BANK_DEBIT=<any>'ONLINE_BANK_DEBIT',
-    BOLETO=<any>'BOLETO',
-    CREDIT_CARD=<any>'CREDIT_CARD'
+export type PaymentMethod = 'CREDIT_CARD' | 'BOLETO' | 'ONLINE_DEBIT' | 'WALLET';
+
+export interface FundingInstrument {
+    method: PaymentMethod;
+    creditCard?: FundingInstrumentCreditCard;
+    boleto?: FundingInstrumentBoleto;
+    onlineDebit?: FundingInstrumentDebit;
 }
 
-export interface IMoipFundingInstrument {
-    method: IMoipPaymentMethod;
-    creditCard?: IMoipFundingInstrumentCreditCard;
-    boleto?: IMoipFundingInstrumentBoleto;
-    onlineBankDebit?: IMoipFundingInstrumentDebit;
-}
-
-export interface IMoipPayment {
+export interface Payment {
     installmentCount?: number;
-    fundingInstrument: IMoipFundingInstrument;
+    fundingInstrument: FundingInstrument;
+    delayCapture?: boolean;
 }
 
-export interface IMoipPhone {
-    countryCode: string;
+export interface Phone {
+    countryCode: '55';
     areaCode: string;
     number: string;
 }
 
-export interface IMoipTaxDocument {
-    type: string;
-    number: string;
+export interface TaxDocument {
+    type?: 'CPF' | 'CNPJ';
+    number?: string;
 }
 
-export interface IMoipShippingAddress {
+export interface ShippingAddress {
     city: string;
     complement: string;
     district: string;
@@ -248,29 +245,28 @@ export interface IMoipShippingAddress {
     country: string;
 }
 
-export interface IMoipCustomer {
+export interface Customer {
     ownId: string;
     fullname: string;
     email: string;
-    birthDate: string;
-    taxDocument: IMoipTaxDocument;
-    phone: IMoipPhone;
-    shippingAddress: IMoipShippingAddress;
+    birthDate?: string;
+    taxDocument: TaxDocument;
+    phone: Phone;
+    shippingAddress?: ShippingAddress;
 }
 
-export interface IMoipSubtotals {
+export interface Subtotals {
     shipping?: number;
     addition?: number;
     discount?: number;
-    items?: number;
 }
 
-export interface IMoipAmount {
-    currency: string;
-    subtotals: IMoipSubtotals;
+export interface Amount {
+    currency: 'BRL';
+    subtotals: Subtotals;
 }
 
-export interface IMoipOrderAmount extends IMoipAmount {
+export interface OrderAmount extends Amount {
     total: number;
     fees: number;
     refunds: number;
@@ -278,21 +274,25 @@ export interface IMoipOrderAmount extends IMoipAmount {
     otherReceivers: number;
 }
 
-export interface IMoipItem {
+export interface Item {
+    /** Nome do produto */
     product: string;
+    /** Quantidade */
     quantity: number;
-    detail: string;
+    /** Detalhes */
+    detail?: string;
+    /** Centavos */
     price: number;
 }
 
-export interface IMoipOrder {
+export interface Order {
+    /** ID próprio */
     ownId: string;
-    amount: IMoipAmount;
-    items: IMoipItem[];
-    customer: IMoipCustomer;
+    amount: Amount;
+    items: Item[];
+    customer: string | Customer;
+    receivers: Receiver[];
 }
-
-
 
 export class Moip {
     static JS = {
@@ -303,7 +303,7 @@ export class Moip {
     public production: boolean;
     private env: string;
 
-    constructor(token: string, key: string, production: boolean = false){
+    constructor(token: string, key: string, production: boolean = false) {
         this.auth = 'Basic ' + (new Buffer(token + ':' + key)).toString('base64');
         this.production = production;
         if (production === true) {
@@ -320,16 +320,16 @@ export class Moip {
         return Moip.JS.dev;
     }
 
-    private _request<T>(method: IMoipMethod, uri: string, data: Object) {
+    private _request<T>(method: RequestMethod, uri: string, data: Object) {
         return new Bluebird<T>((resolve, reject) => {
             switch (method) {
-                case IMoipMethod.del:
-                case IMoipMethod.get:
-                case IMoipMethod.put:
-                case IMoipMethod.post:
+                case RequestMethod.delete:
+                case RequestMethod.get:
+                case RequestMethod.put:
+                case RequestMethod.post:
                     request({
-                        method: IMoipMethod[method],
-                        url: this.env + uri,
+                        method: RequestMethod[method],
+                        url: this.env + String(uri),
                         strictSSL: true,
                         json: true,
                         body: data,
@@ -337,20 +337,22 @@ export class Moip {
                             Authorization: this.auth
                         }
                     }, (error, response, body) => {
+                        console.error(method, RequestMethod[method], this.env + String(uri), error, data, this.auth, response, body);
+
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);
-                        } else if (body.errors) {
+                        } else if (body && body.errors && body.errors.length) {
                             reject(new MoipError(body.errors, response.statusCode));
                         } else if (error) {
-                            reject(error);
-                        } else if (body.ERROR) {
+                            reject(error instanceof Error ? error : new Error(error));
+                        } else if (body && body.ERROR) {
                             reject(new MoipError([{
                                 code: '?',
                                 path: '?',
                                 description: body.ERROR
                             }], response.statusCode));
                         } else {
-                            reject(new Error(body));
+                            reject(new Error(body ? body : response.statusCode));
                         }
                     });
 
@@ -361,28 +363,45 @@ export class Moip {
         }).bind(this);
     }
 
-    createCustomer(customer: IMoipCustomer){
-        return this._request<IMoipCustomerResponse>(IMoipMethod.post, '/customers', customer);
+    createCustomer(customer: Customer) {
+        return this._request<CustomerResponse>(RequestMethod.post, '/customers', customer);
     }
 
-    getCustomer(customerId: string){
-        return this._request<IMoipCustomerResponse>(IMoipMethod.get, '/customers/' + customerId, {});
+    getCustomer(customerId: string) {
+        return this._request<CustomerResponse>(RequestMethod.get, `/customers/${customerId}`, {});
     }
 
-    createOrder(order: IMoipOrder) {
-        return this._request<IMoipOrderResponse>(IMoipMethod.post, '/orders', order);
+    createOrder(order: Order) {
+        return this._request<OrderResponse>(RequestMethod.post, '/orders', order);
     }
 
     getOrder(orderId: string) {
-        return this._request<IMoipOrderResponse>(IMoipMethod.get, '/orders/' + orderId, {});
+        return this._request<OrderResponse>(RequestMethod.get, `/orders/${orderId}`, {});
     }
 
-    createPayment(payment: IMoipPayment, orderId: string) {
-        return this._request<IMoipPaymentResponse>(IMoipMethod.post, '/orders/' + orderId + '/payments', payment);
+    createPayment(payment: Payment, orderId: string) {
+        return this._request<PaymentResponse>(RequestMethod.post, `/orders/${orderId}/payments`, payment);
     }
 
     getPayment(paymentId: string) {
-        return this._request<IMoipPaymentResponse>(IMoipMethod.get, '/payments/' + paymentId, {});
+        return this._request<PaymentResponse>(RequestMethod.get, `/payments/${paymentId}`, {});
+    }
+
+    setNotification(events: string[], endpoint: string) {
+        let Request: Webhook = {
+            events: events,
+            media: 'WEBHOOK',
+            target: endpoint
+        };
+        return this._request<WebhookResponse>(RequestMethod.post, '/preferences/notifications', Request);
+    }
+
+    deleteNotification(id: string) {
+        return this._request<{}>(RequestMethod.delete, `/preferences/notifications/${id}`, {});
+    }
+
+    getNotifications() {
+        return this._request<WebhookResponse[]>(RequestMethod.get, '/preferences/notifications', {});
     }
 
 }
