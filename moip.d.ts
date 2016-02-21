@@ -223,7 +223,7 @@ export interface Order {
     amount: Amount;
     items: Item[];
     customer: string | Customer;
-    receivers: Receiver[];
+    receivers?: Receiver[];
 }
 export declare class Moip {
     static JS: {

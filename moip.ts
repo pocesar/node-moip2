@@ -291,7 +291,7 @@ export interface Order {
     amount: Amount;
     items: Item[];
     customer: string | Customer;
-    receivers: Receiver[];
+    receivers?: Receiver[];
 }
 
 export class Moip {
