@@ -4,6 +4,7 @@ import * as request from 'request';
 import * as Bluebird from 'bluebird';
 
 var debug = require('debug')('moip2');
+var debugFull = require('debug')('moip2:full');
 
 export interface IMoipCustomError extends Error {
     errors: IMoipError[];
@@ -339,7 +340,8 @@ export class Moip {
                             Authorization: this.auth
                         }
                     }, (error, response, body) => {
-                        debug(method, RequestMethod[method], this.env + String(uri), error, data, this.auth, response, body);
+                        debug(method, RequestMethod[method], this.env + String(uri), data, body, error);
+                        debugFull(method, RequestMethod[method], this.env + String(uri), error, data, this.auth, response, body);
 
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);

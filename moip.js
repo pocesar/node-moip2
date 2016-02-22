@@ -7,6 +7,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 var request = require('request');
 var Bluebird = require('bluebird');
 var debug = require('debug')('moip2');
+var debugFull = require('debug')('moip2:full');
 var MoipError = (function (_super) {
     __extends(MoipError, _super);
     function MoipError(errors, code) {
@@ -77,7 +78,8 @@ var Moip = (function () {
                             Authorization: _this.auth
                         }
                     }, function (error, response, body) {
-                        debug(method, RequestMethod[method], _this.env + String(uri), error, data, _this.auth, response, body);
+                        debug(method, RequestMethod[method], _this.env + String(uri), data, body, error);
+                        debugFull(method, RequestMethod[method], _this.env + String(uri), error, data, _this.auth, response, body);
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);
                         }

@@ -82,7 +82,7 @@ moip.createCustomer({
 
 ## Debug
 
-Setting the `DEBUG=moip2` environment variable will make the library display all the requests being made
+Setting the `DEBUG=moip2,moip2:full` environment variable will make the library display all the requests being made
 
 ## License
 

@@ -25,7 +25,7 @@
         "typings"
     ],
     "scripts": {
-        "release": "npm publish --access=public",
+        "release": "npm run compile && npm publish --access=public",
         "compile": "tsc"
     },
     "license": "GPL-3.0"
