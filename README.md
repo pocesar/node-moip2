@@ -80,6 +80,10 @@ moip.createCustomer({
 }).catch(console.error.bind(console));
 ```
 
+## Debug
+
+Setting the `DEBUG=moip2` environment variable will make the library display all the requests being made
+
 ## License
 
 GPLv3
