@@ -6,6 +6,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var request = require('request');
 var Bluebird = require('bluebird');
+var util_1 = require('util');
 var debug = require('debug')('moip2');
 var debugFull = require('debug')('moip2:full');
 var MoipError = (function (_super) {
@@ -42,6 +43,9 @@ Object.defineProperty(MoipError.prototype, 'constructor', {
     RequestMethod[RequestMethod["post"] = 3] = "post";
 })(exports.RequestMethod || (exports.RequestMethod = {}));
 var RequestMethod = exports.RequestMethod;
+function inspectObj(obj) {
+    return util_1.inspect(obj, false, 10, true);
+}
 var Moip = (function () {
     function Moip(token, key, production) {
         if (production === void 0) { production = false; }
@@ -78,8 +82,12 @@ var Moip = (function () {
                             Authorization: _this.auth
                         }
                     }, function (error, response, body) {
-                        debug(method, RequestMethod[method], _this.env + String(uri), data, body, error);
-                        debugFull(method, RequestMethod[method], _this.env + String(uri), error, data, _this.auth, response, body);
+                        if (debug.enabled) {
+                            debug("\nmethod: ", RequestMethod[method], "\nurl: ", _this.env + String(uri), "\ndata:", inspectObj(data), "\nbody:", inspectObj(body), "\nerror:", (error && error.stack));
+                        }
+                        if (debugFull.enabled) {
+                            debugFull("\nmethod: ", RequestMethod[method], "\nurl: ", _this.env + String(uri), "\nerror:", (error && error.stack), "\ndata:", inspectObj(data), _this.auth, "\nsocket:", response, "\nbody:", inspectObj(body));
+                        }
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);
                         }
@@ -139,8 +147,8 @@ var Moip = (function () {
         return this._request(RequestMethod.get, '/preferences/notifications', {});
     };
     Moip.JS = {
-        dev: '//assets.moip.com.br/integration/moip.min.js',
-        prod: '//assets.moip.com.br/integration/moip.min.js'
+        dev: '//assets.moip.com.br/v2/moip.min.js',
+        prod: '//assets.moip.com.br/v2/moip.min.js'
     };
     return Moip;
 }());

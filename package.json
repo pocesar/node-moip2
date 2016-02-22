@@ -1,6 +1,6 @@
 {
     "name": "@pocesar/moip2",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "main": "./moip.js",
     "typings": "./moip.d.ts",
     "description": "API for MOIP v2 HATEOAS with Typescript typings",

@@ -42,11 +42,21 @@ export interface Links {
     self: HATEOAS;
 }
 export interface Response<T> {
-    id: string;
+    id?: string;
     ownId: string;
     createdAt?: string;
     updatedAt?: string;
     _links?: T;
+}
+export interface Customer {
+    id?: string;
+    ownId: string;
+    fullname: string;
+    email: string;
+    birthDate?: string;
+    taxDocument: TaxDocument;
+    phone: Phone;
+    shippingAddress?: ShippingAddress;
 }
 export interface CustomerResponse extends Response<Links>, Customer {
 }
@@ -181,15 +191,6 @@ export interface ShippingAddress {
     zipCode: string;
     state: string;
     country: string;
-}
-export interface Customer {
-    ownId: string;
-    fullname: string;
-    email: string;
-    birthDate?: string;
-    taxDocument: TaxDocument;
-    phone: Phone;
-    shippingAddress?: ShippingAddress;
 }
 export interface Subtotals {
     shipping?: number;

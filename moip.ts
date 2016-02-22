@@ -2,6 +2,7 @@
 
 import * as request from 'request';
 import * as Bluebird from 'bluebird';
+import { inspect } from 'util';
 
 var debug = require('debug')('moip2');
 var debugFull = require('debug')('moip2:full');
@@ -79,11 +80,22 @@ export interface Links {
 }
 
 export interface Response<T> {
-    id: string;
+    id?: string;
     ownId: string;
     createdAt?: string;
     updatedAt?: string;
     _links?: T;
+}
+
+export interface Customer {
+    id?: string;
+    ownId: string;
+    fullname: string;
+    email: string;
+    birthDate?: string;
+    taxDocument: TaxDocument;
+    phone: Phone;
+    shippingAddress?: ShippingAddress;
 }
 
 export interface CustomerResponse extends Response<Links>, Customer {
@@ -248,16 +260,6 @@ export interface ShippingAddress {
     country: string;
 }
 
-export interface Customer {
-    ownId: string;
-    fullname: string;
-    email: string;
-    birthDate?: string;
-    taxDocument: TaxDocument;
-    phone: Phone;
-    shippingAddress?: ShippingAddress;
-}
-
 export interface Subtotals {
     shipping?: number;
     addition?: number;
@@ -297,10 +299,14 @@ export interface Order {
     receivers?: Receiver[];
 }
 
+function inspectObj(obj: Object) {
+    return inspect(obj, false, 10, true);
+}
+
 export class Moip {
     static JS = {
-        dev: '//assets.moip.com.br/integration/moip.min.js',
-        prod: '//assets.moip.com.br/integration/moip.min.js'
+        dev: '//assets.moip.com.br/v2/moip.min.js',
+        prod: '//assets.moip.com.br/v2/moip.min.js'
     };
     private auth: string;
     public production: boolean;
@@ -340,8 +346,12 @@ export class Moip {
                             Authorization: this.auth
                         }
                     }, (error, response, body) => {
-                        debug(method, RequestMethod[method], this.env + String(uri), data, body, error);
-                        debugFull(method, RequestMethod[method], this.env + String(uri), error, data, this.auth, response, body);
+                        if (debug.enabled) {
+                            debug("\nmethod: ", RequestMethod[method], "\nurl: ", this.env + String(uri), "\ndata:", inspectObj(data), "\nbody:", inspectObj(body),  "\nerror:", (error && error.stack));
+                        }
+                        if (debugFull.enabled) {
+                            debugFull("\nmethod: ", RequestMethod[method], "\nurl: ", this.env + String(uri), "\nerror:", (error && error.stack), "\ndata:", inspectObj(data), this.auth, "\nsocket:", response, "\nbody:", inspectObj(body));
+                        }
 
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);
