@@ -10,6 +10,7 @@ export declare class MoipError extends Error implements IMoipCustomError {
     message: string;
     constructor(errors: IMoipError[], code: number);
 }
+export declare type OAuthScope = 'CREATE_ORDERS' | 'VIEW_ORDERS' | 'CREATE_PAYMENTS' | 'VIEW_PAYMENTS';
 export declare enum RequestMethod {
     get = 0,
     put = 1,
@@ -43,7 +44,6 @@ export interface Links {
 }
 export interface Response<T> {
     id?: string;
-    ownId: string;
     createdAt?: string;
     updatedAt?: string;
     _links?: T;
@@ -56,7 +56,7 @@ export interface Customer {
     birthDate?: string;
     taxDocument: TaxDocument;
     phone: Phone;
-    shippingAddress?: ShippingAddress;
+    shippingAddress?: Address;
 }
 export interface CustomerResponse extends Response<Links>, Customer {
 }
@@ -81,7 +81,7 @@ export interface OrderResponse extends Response<OrderLinks>, Order, Events {
     refunds: any[];
     entries: any[];
     receivers: Receiver[];
-    shippingAddress: ShippingAddress;
+    shippingAddress: Address;
 }
 export interface PaymentLinks extends CheckoutLinks {
     order: HATEOAS;
@@ -121,6 +121,13 @@ export interface Event {
     description: string;
     type: string;
 }
+export interface MoipAccount {
+    fullname?: string;
+    login?: string;
+    email?: string;
+    /** Identificador de conta Moip: Ex. MPA-1A23BC4D5E6F. */
+    id: string;
+}
 export interface Receiver {
     amount: {
         fixed?: number;
@@ -129,11 +136,7 @@ export interface Receiver {
         refunds?: number;
         total?: number;
     };
-    moipAccount: {
-        fullname?: string;
-        login?: string;
-        id: string;
-    };
+    moipAccount: MoipAccount;
     type: string;
 }
 export interface FundingInstrumentCreditCardHolder {
@@ -182,7 +185,20 @@ export interface TaxDocument {
     type?: 'CPF' | 'CNPJ';
     number?: string;
 }
-export interface ShippingAddress {
+export interface MainActivity {
+    cnae: string;
+    description: string;
+}
+export interface Company {
+    name: string;
+    businessName: string;
+    taxDocument: TaxDocument;
+    mainActivity: MainActivity;
+    openingDate: string;
+    phone: Phone;
+    address: Address;
+}
+export interface Address {
     city: string;
     complement: string;
     district: string;
@@ -218,6 +234,40 @@ export interface Item {
     /** Centavos */
     price: number;
 }
+export interface EmailAddress {
+    address: string;
+    confirmed?: boolean;
+}
+export interface Person {
+    name: string;
+    lastName: string;
+    birthDate: string;
+    taxDocument: TaxDocument;
+    phone: Phone;
+    address: Address;
+}
+export interface BusinessSegment {
+    id: string;
+}
+export interface TOSAcceptance {
+    acceptedAt: string;
+    ip: string;
+    userAgent: string;
+}
+export interface Account {
+    type: 'MERCHANT' | 'CONSUMER';
+    person: Person;
+    email: EmailAddress;
+    company?: Company;
+    businessSegment?: BusinessSegment;
+    site?: string;
+    transparentAccount?: boolean;
+    tosAcceptance?: TOSAcceptance;
+}
+export interface AccountResponse extends Account, Response<Links> {
+    channelId: string;
+    login: string;
+}
 export interface Order {
     /** ID próprio */
     ownId: string;
@@ -225,6 +275,57 @@ export interface Order {
     items: Item[];
     customer: string | Customer;
     receivers?: Receiver[];
+}
+export interface BankAccountHolder {
+    fullname: string;
+    taxDocument: TaxDocument;
+}
+export interface BankAccount {
+    type: 'CHECKING' | 'SAVING';
+    bankNumber: string;
+    agencyNumber: number;
+    /** Dígito verificador da agência. */
+    agencyCheckNumber: number;
+    accountNumber: number;
+    /** Dígito verificador da conta. */
+    accountCheckNumber: number;
+    holder: BankAccountHolder;
+}
+export interface Summary {
+    amount: number;
+    count: number;
+}
+export interface BankAccountsResponse extends Response<Links> {
+    summary: Summary;
+    bankAccounts: BankAccountResponse[];
+}
+export interface BankAccountResponse extends BankAccount, Response<Links> {
+    bankName: string;
+    status: 'NOT_VERIFIED' | 'IN_VERIFICATION' | 'VERIFIED' | 'INVALID';
+}
+export interface TransferInstrument {
+    method: 'BANK_ACCOUNT' | 'MOIP_ACCOUNT';
+    bankAccount?: BankAccount;
+    moipAccount?: MoipAccount;
+}
+export interface Transfer {
+    amount: number;
+    transferInstrument: TransferInstrument;
+}
+export interface TransferResponse extends Transfer, Response<Links> {
+    id: string;
+    fee: number;
+    status: 'REQUESTED' | 'COMPLETED' | 'FAILED';
+}
+export interface TransfersResponse extends Response<Links> {
+    summary: Summary;
+    transfers: TransferResponse[];
+}
+export interface RequestOptions {
+    headers?: {
+        [index: string]: any;
+    };
+    version?: 'v2' | '';
 }
 export declare class Moip {
     static JS: {
@@ -234,9 +335,14 @@ export declare class Moip {
     private auth;
     production: boolean;
     private env;
-    constructor(token: string, key: string, production?: boolean);
+    appId: string;
+    version: string;
+    appSecret: string;
+    constructor(token: string, key: string, production?: boolean, appId?: string, appSecret?: string);
     js(): string;
-    private _request<T>(method, uri, data);
+    setAppId(id: string): this;
+    setAppSecret(id: string): this;
+    request<T, U>(method: RequestMethod, uri: string, data?: U, options?: RequestOptions): Bluebird<T>;
     createCustomer(customer: Customer): Bluebird<CustomerResponse>;
     getCustomer(customerId: string): Bluebird<CustomerResponse>;
     createOrder(order: Order): Bluebird<OrderResponse>;
@@ -244,6 +350,30 @@ export declare class Moip {
     createPayment(payment: Payment, orderId: string): Bluebird<PaymentResponse>;
     getPayment(paymentId: string): Bluebird<PaymentResponse>;
     setNotification(events: string[], endpoint: string): Bluebird<WebhookResponse>;
-    deleteNotification(id: string): Bluebird<{}>;
+    deleteNotification(id: string): Bluebird<any>;
     getNotifications(): Bluebird<WebhookResponse[]>;
+    getOAuthUrl(redirectUri: string, scope: OAuthScope[]): string;
+}
+export declare class OAuth {
+    private parent;
+    code: string;
+    scope: OAuthScope[];
+    accessToken: string;
+    constructor(parent: Moip);
+    static factory(parent: Moip): OAuth;
+    headers: {
+        Authorization: string;
+    };
+    setCode(code: string): this;
+    setScope(scope: string): this;
+    getAccount(id: string): Bluebird<AccountResponse>;
+    createAccount(accountData: Account): Bluebird<AccountResponse>;
+    createBankAccount(moipAccountId: string, bankAccount: BankAccount): Bluebird<BankAccountResponse>;
+    getBankAccount(bankAccountId: string): Bluebird<BankAccountResponse>;
+    getBankAccounts(moipAccountId: string): Bluebird<BankAccountsResponse>;
+    deleteBankAccount(bankAccountId: string): Bluebird<any>;
+    updateBankAccount(bankAccountId: string, partial: BankAccount): Bluebird<BankAccountResponse>;
+    createTransfer(transfer: Transfer): Bluebird<TransferResponse>;
+    extract(query: string | any): this;
+    getAccessToken(redirectUri: string): Bluebird<{}>;
 }

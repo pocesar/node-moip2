@@ -44,6 +44,8 @@ Object.defineProperty(MoipError.prototype, 'constructor', {
     configurable: true
 });
 
+export type OAuthScope = 'CREATE_ORDERS' | 'VIEW_ORDERS' | 'CREATE_PAYMENTS' | 'VIEW_PAYMENTS';
+
 export enum RequestMethod {
     get,
     put,
@@ -81,7 +83,6 @@ export interface Links {
 
 export interface Response<T> {
     id?: string;
-    ownId: string;
     createdAt?: string;
     updatedAt?: string;
     _links?: T;
@@ -95,7 +96,7 @@ export interface Customer {
     birthDate?: string;
     taxDocument: TaxDocument;
     phone: Phone;
-    shippingAddress?: ShippingAddress;
+    shippingAddress?: Address;
 }
 
 export interface CustomerResponse extends Response<Links>, Customer {
@@ -126,7 +127,7 @@ export interface OrderResponse extends Response<OrderLinks>, Order, Events {
     refunds: any[];
     entries: any[];
     receivers: Receiver[];
-    shippingAddress: ShippingAddress;
+    shippingAddress: Address;
 }
 
 export interface PaymentLinks extends CheckoutLinks {
@@ -177,6 +178,14 @@ export interface Event {
     type: string;
 }
 
+export interface MoipAccount {
+    fullname?: string;
+    login?: string;
+    email?: string;
+    /** Identificador de conta Moip: Ex. MPA-1A23BC4D5E6F. */
+    id: string;
+}
+
 export interface Receiver {
     amount: {
         fixed?: number;
@@ -185,11 +194,7 @@ export interface Receiver {
         refunds?: number;
         total?: number;
     };
-    moipAccount: {
-        fullname?: string;
-        login?: string;
-        id: string;
-    };
+    moipAccount: MoipAccount;
     type: string;
 }
 
@@ -249,7 +254,24 @@ export interface TaxDocument {
     number?: string;
 }
 
-export interface ShippingAddress {
+export interface MainActivity {
+    cnae: string;
+    description: string;
+}
+
+export interface Company {
+    /* Fantasia */
+    name: string;
+    /* Razão social */
+    businessName: string;
+    taxDocument: TaxDocument;
+    mainActivity: MainActivity;
+    openingDate: string;
+    phone: Phone;
+    address: Address;
+}
+
+export interface Address {
     city: string;
     complement: string;
     district: string;
@@ -290,6 +312,46 @@ export interface Item {
     price: number;
 }
 
+export interface EmailAddress {
+    address: string;
+    confirmed?: boolean;
+}
+
+export interface Person {
+    name: string;
+    lastName: string;
+    birthDate: string;
+    taxDocument: TaxDocument;
+    phone: Phone;
+    address: Address;
+}
+
+export interface BusinessSegment {
+    id: string;
+}
+
+export interface TOSAcceptance {
+    acceptedAt: string;
+    ip: string;
+    userAgent: string;
+}
+
+export interface Account {
+    type: 'MERCHANT' | 'CONSUMER';
+    person: Person;
+    email: EmailAddress;
+    company?: Company;
+    businessSegment?: BusinessSegment;
+    site?: string;
+    transparentAccount?: boolean;
+    tosAcceptance?: TOSAcceptance;
+}
+
+export interface AccountResponse extends Account, Response<Links> {
+    channelId: string;
+    login: string;
+}
+
 export interface Order {
     /** ID próprio */
     ownId: string;
@@ -299,8 +361,67 @@ export interface Order {
     receivers?: Receiver[];
 }
 
+export interface BankAccountHolder {
+    fullname: string;
+    taxDocument: TaxDocument;
+}
+
+export interface BankAccount {
+    type: 'CHECKING' | 'SAVING';
+    bankNumber: string;
+    agencyNumber: number;
+    /** Dígito verificador da agência. */
+    agencyCheckNumber: number;
+    accountNumber: number;
+    /** Dígito verificador da conta. */
+    accountCheckNumber: number;
+    holder: BankAccountHolder;
+}
+
+export interface Summary {
+    amount: number;
+    count: number;
+}
+
+export interface BankAccountsResponse extends Response<Links> {
+    summary: Summary;
+    bankAccounts: BankAccountResponse[];
+}
+
+export interface BankAccountResponse extends BankAccount, Response<Links> {
+    bankName: string;
+    status: 'NOT_VERIFIED' | 'IN_VERIFICATION' | 'VERIFIED' | 'INVALID';
+}
+
+export interface TransferInstrument {
+    method: 'BANK_ACCOUNT' | 'MOIP_ACCOUNT';
+    bankAccount?: BankAccount;
+    moipAccount?: MoipAccount;
+}
+
+export interface Transfer {
+    amount: number;
+    transferInstrument: TransferInstrument;
+}
+
+export interface TransferResponse extends Transfer, Response<Links> {
+    id: string;
+    fee: number;
+    status: 'REQUESTED' | 'COMPLETED' | 'FAILED';
+}
+
+export interface TransfersResponse extends Response<Links> {
+    summary: Summary;
+    transfers: TransferResponse[];
+}
+
 function inspectObj(obj: Object) {
     return inspect(obj, false, 10, true);
+}
+
+export interface RequestOptions {
+    headers?: {[index: string]: any};
+    version?: 'v2' | '';
 }
 
 export class Moip {
@@ -311,14 +432,26 @@ export class Moip {
     private auth: string;
     public production: boolean;
     private env: string;
+    public appId: string = '';
+    public version: string = 'v2';
+    public appSecret: string = '';
 
-    constructor(token: string, key: string, production: boolean = false) {
+    constructor(token: string, key: string, production: boolean = false, appId?: string, appSecret?: string) {
         this.auth = 'Basic ' + (new Buffer(token + ':' + key)).toString('base64');
         this.production = production;
+
         if (production === true) {
-            this.env = 'https://api.moip.com.br/v2';
+            this.env = 'https://api.moip.com.br';
         } else {
-            this.env = 'https://sandbox.moip.com.br/v2';
+            this.env = 'https://sandbox.moip.com.br';
+        }
+
+        if (appId) {
+            this.setAppId(appId);
+        }
+
+        if (appSecret) {
+            this.setAppSecret(appSecret);
         }
     }
 
@@ -329,8 +462,32 @@ export class Moip {
         return Moip.JS.dev;
     }
 
-    private _request<T>(method: RequestMethod, uri: string, data: Object) {
+    setAppId(id: string) {
+        this.appId = id;
+
+        return this;
+    }
+
+    setAppSecret(id: string) {
+        this.appSecret = id;
+
+        return this;
+    }
+
+    request<T, U>(method: RequestMethod, uri: string, data?: U, options?: RequestOptions) {
         return new Bluebird<T>((resolve, reject) => {
+            uri = '' + uri;
+
+            let url: string = this.env + (options && typeof options.version !== 'undefined' ? options.version : this.version).replace(/^([^\/])/, '/$1');
+
+            let headers: any = {
+                Authorization: this.auth
+            };
+
+            if (options && options.headers) {
+                headers = options.headers
+            }
+
             switch (method) {
                 case RequestMethod.delete:
                 case RequestMethod.get:
@@ -338,19 +495,17 @@ export class Moip {
                 case RequestMethod.post:
                     request({
                         method: RequestMethod[method],
-                        url: this.env + String(uri),
+                        url: url + uri,
                         strictSSL: true,
                         json: true,
-                        body: data,
-                        headers: {
-                            Authorization: this.auth
-                        }
+                        body: data || {},
+                        headers: headers
                     }, (error, response, body) => {
                         if (debug.enabled) {
-                            debug("\nmethod: ", RequestMethod[method], "\nurl: ", this.env + String(uri), "\ndata:", inspectObj(data), "\nbody:", inspectObj(body),  "\nerror:", (error && error.stack));
+                            debug("\nmethod: ", RequestMethod[method], "\nurl: ", url + uri, "\ndata:", inspectObj(data), "\nbody:", inspectObj(body),  "\nerror:", (error && error.stack));
                         }
                         if (debugFull.enabled) {
-                            debugFull("\nmethod: ", RequestMethod[method], "\nurl: ", this.env + String(uri), "\nerror:", (error && error.stack), "\ndata:", inspectObj(data), this.auth, "\nsocket:", response, "\nbody:", inspectObj(body));
+                            debugFull("\nmethod: ", RequestMethod[method], "\nurl: ", url + uri, "\nerror:", (error && error.stack), "\ndata:", inspectObj(data), this.auth, "\nsocket:", response, "\nbody:", inspectObj(body));
                         }
 
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
@@ -378,27 +533,27 @@ export class Moip {
     }
 
     createCustomer(customer: Customer) {
-        return this._request<CustomerResponse>(RequestMethod.post, '/customers', customer);
+        return this.request<CustomerResponse, Customer>(RequestMethod.post, '/customers', customer);
     }
 
     getCustomer(customerId: string) {
-        return this._request<CustomerResponse>(RequestMethod.get, `/customers/${customerId}`, {});
+        return this.request<CustomerResponse, any>(RequestMethod.get, `/customers/${customerId}`);
     }
 
     createOrder(order: Order) {
-        return this._request<OrderResponse>(RequestMethod.post, '/orders', order);
+        return this.request<OrderResponse, Order>(RequestMethod.post, '/orders', order);
     }
 
     getOrder(orderId: string) {
-        return this._request<OrderResponse>(RequestMethod.get, `/orders/${orderId}`, {});
+        return this.request<OrderResponse, any>(RequestMethod.get, `/orders/${orderId}`);
     }
 
     createPayment(payment: Payment, orderId: string) {
-        return this._request<PaymentResponse>(RequestMethod.post, `/orders/${orderId}/payments`, payment);
+        return this.request<PaymentResponse, Payment>(RequestMethod.post, `/orders/${orderId}/payments`, payment);
     }
 
     getPayment(paymentId: string) {
-        return this._request<PaymentResponse>(RequestMethod.get, `/payments/${paymentId}`, {});
+        return this.request<PaymentResponse, any>(RequestMethod.get, `/payments/${paymentId}`);
     }
 
     setNotification(events: string[], endpoint: string) {
@@ -407,15 +562,137 @@ export class Moip {
             media: 'WEBHOOK',
             target: endpoint
         };
-        return this._request<WebhookResponse>(RequestMethod.post, '/preferences/notifications', Request);
+        return this.request<WebhookResponse, Webhook>(RequestMethod.post, '/preferences/notifications', Request);
     }
 
     deleteNotification(id: string) {
-        return this._request<{}>(RequestMethod.delete, `/preferences/notifications/${id}`, {});
+        return this.request<any, any>(RequestMethod.delete, `/preferences/notifications/${id}`);
     }
 
     getNotifications() {
-        return this._request<WebhookResponse[]>(RequestMethod.get, '/preferences/notifications', {});
+        return this.request<WebhookResponse[], any>(RequestMethod.get, '/preferences/notifications');
+    }
+
+    getOAuthUrl(redirectUri: string, scope: OAuthScope[]) {
+        return `${this.env}/oauth/authorize?responseType=CODE&appId=${this.appId}&redirectUri=${encodeURIComponent(redirectUri)}&scope=${scope.join('|')}`;
+    }
+
+}
+
+export class OAuth {
+
+    public code: string;
+    public scope: OAuthScope[] = [];
+    public accessToken: string = '';
+
+    constructor(private parent: Moip) {
+    }
+
+    static factory(parent: Moip) {
+        return new this(parent);
+    }
+
+    get headers() {
+        return {
+            Authorization: `OAuth ${this.accessToken}`
+        }
+    }
+
+    setCode(code: string) {
+        this.code = code;
+
+        return this;
+    }
+
+    setScope(scope: string) {
+        this.scope = scope.split(/[\+\| ]/g).map((value: any) => {
+            return <OAuthScope>value.toUpperCase();
+        });
+
+        return this;
+    }
+
+    getAccount(id: string) {
+        return this.parent.request<AccountResponse, any>(RequestMethod.get, `/accounts/${id}`, {}, {
+            headers: this.headers
+        });
+    }
+
+    createAccount(accountData: Account) {
+        return this.parent.request<AccountResponse, Account>(RequestMethod.post, `/accounts`, accountData, {
+            headers: this.headers
+        });
+    }
+
+    createBankAccount(moipAccountId: string, bankAccount: BankAccount) {
+        return this.parent.request<BankAccountResponse, BankAccount>(RequestMethod.post, `/accounts/${moipAccountId}/bankaccounts`, bankAccount, {
+            headers: this.headers
+        });
+    }
+
+    getBankAccount(bankAccountId: string) {
+        return this.parent.request<BankAccountResponse, any>(RequestMethod.get, `/bankaccounts/${bankAccountId}`, {}, {
+            headers: this.headers
+        });
+    }
+
+    getBankAccounts(moipAccountId: string) {
+        return this.parent.request<BankAccountsResponse, any>(RequestMethod.get, `/accounts/${moipAccountId}/bankaccounts`, {}, {
+            headers: this.headers
+        });
+    }
+
+    deleteBankAccount(bankAccountId: string) {
+        return this.parent.request<any, any>(RequestMethod.delete, `/bankaccounts/${bankAccountId}`, {}, {
+            headers: this.headers
+        });
+    }
+
+    updateBankAccount(bankAccountId: string, partial: BankAccount) {
+        return this.parent.request<BankAccountResponse, BankAccount>(RequestMethod.put, `/bankaccounts/${bankAccountId}`, partial, {
+            headers: this.headers
+        });
+    }
+
+    createTransfer(transfer: Transfer) {
+        return this.parent.request<TransferResponse, Transfer>(RequestMethod.post, `/transfers`, transfer, {
+            headers: this.headers
+        })
+    }
+
+    extract(query: string | any) {
+        if (typeof query === 'string') {
+            var code = RegExp('code=([^&]{32})', 'i');
+            var scope = RegExp('scope=([^&]+)', 'i');
+            var matches: string[];
+            if ((matches = code.exec(query)) && matches[1]) {
+                this.setCode(matches[1]);
+            }
+            if ((matches = scope.exec(query)) && matches[1]) {
+                this.setScope(matches[1]);
+            }
+        } else if (typeof query === 'object') {
+            if (typeof query['code'] !== 'undefined' && ('' + query['code']).length === 32) {
+                this.setScope('' + query['code']);
+            }
+            if (typeof query['scope'] !== 'undefined' && ('' + query['scope'])) {
+                this.setScope('' + query['scope']);
+            }
+        }
+
+        return this;
+    }
+
+    getAccessToken(redirectUri: string) {
+        return this.parent.request(RequestMethod.post, '/oauth/accesstoken', {
+            appId: this.parent.appId,
+            appSecret: this.parent.appSecret,
+            redirectUri: redirectUri,
+            grantType: 'AUTHORIZATION_CODE',
+            code: this.code
+        }, {
+            version: ''
+        });
     }
 
 }
