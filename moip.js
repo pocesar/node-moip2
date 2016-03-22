@@ -172,6 +172,9 @@ var Moip = (function () {
     Moip.prototype.getOAuthUrl = function (redirectUri, scope) {
         return this.env + "/oauth/authorize?responseType=CODE&appId=" + this.appId + "&redirectUri=" + encodeURIComponent(redirectUri) + "&scope=" + scope.join('|');
     };
+    Moip.prototype.getOAuthInstance = function () {
+        return OAuth.factory(this);
+    };
     Moip.JS = {
         dev: '//assets.moip.com.br/v2/moip.min.js',
         prod: '//assets.moip.com.br/v2/moip.min.js'

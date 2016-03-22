@@ -577,6 +577,10 @@ export class Moip {
         return `${this.env}/oauth/authorize?responseType=CODE&appId=${this.appId}&redirectUri=${encodeURIComponent(redirectUri)}&scope=${scope.join('|')}`;
     }
 
+    getOAuthInstance() {
+        return OAuth.factory(this);
+    }
+
 }
 
 export class OAuth {

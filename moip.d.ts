@@ -353,6 +353,7 @@ export declare class Moip {
     deleteNotification(id: string): Bluebird<any>;
     getNotifications(): Bluebird<WebhookResponse[]>;
     getOAuthUrl(redirectUri: string, scope: OAuthScope[]): string;
+    getOAuthInstance(): OAuth;
 }
 export declare class OAuth {
     private parent;
