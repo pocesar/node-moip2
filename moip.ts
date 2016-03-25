@@ -482,7 +482,7 @@ export class Moip {
 
             let headers: any = {
                 Authorization: this.auth
-            };
+            }
 
             if (options && options.headers) {
                 headers = options.headers
