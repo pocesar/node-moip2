@@ -228,13 +228,13 @@ export interface FundingInstrumentCreditCard {
     holder: FundingInstrumentCreditCardHolder;
 }
 
-export type PaymentMethod = 'CREDIT_CARD' | 'BOLETO' | 'ONLINE_DEBIT' | 'WALLET';
+export type PaymentMethod = 'CREDIT_CARD' | 'BOLETO' | 'ONLINE_BANK_DEBIT' | 'WALLET';
 
 export interface FundingInstrument {
     method: PaymentMethod;
     creditCard?: FundingInstrumentCreditCard;
     boleto?: FundingInstrumentBoleto;
-    onlineDebit?: FundingInstrumentDebit;
+    onlineBankDebit?: FundingInstrumentDebit;
 }
 
 export interface Payment {

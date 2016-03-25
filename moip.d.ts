@@ -164,12 +164,12 @@ export interface FundingInstrumentCreditCard {
     hash: string;
     holder: FundingInstrumentCreditCardHolder;
 }
-export declare type PaymentMethod = 'CREDIT_CARD' | 'BOLETO' | 'ONLINE_DEBIT' | 'WALLET';
+export declare type PaymentMethod = 'CREDIT_CARD' | 'BOLETO' | 'ONLINE_BANK_DEBIT' | 'WALLET';
 export interface FundingInstrument {
     method: PaymentMethod;
     creditCard?: FundingInstrumentCreditCard;
     boleto?: FundingInstrumentBoleto;
-    onlineDebit?: FundingInstrumentDebit;
+    onlineBankDebit?: FundingInstrumentDebit;
 }
 export interface Payment {
     installmentCount?: number;
