@@ -10,7 +10,15 @@ export declare class MoipError extends Error implements IMoipCustomError {
     message: string;
     constructor(errors: IMoipError[], code: number);
 }
-export declare type OAuthScope = 'CREATE_ORDERS' | 'VIEW_ORDERS' | 'CREATE_PAYMENTS' | 'VIEW_PAYMENTS';
+export declare type WebhookEvents = WebhookEventOrder | WebhookEventPayment | WebhookEventRefund | WebhookEventMultiorder | WebhookEventMultipayment | WebhookEventEntry | WebhookEventTransfer;
+export declare type WebhookEventOrder = "ORDER.CREATED" | "ORDER.WAITING" | "ORDER.PAID" | "ORDER.NOT_PAID" | "ORDER.REVERTED";
+export declare type WebhookEventPayment = "PAYMENT.WAITING" | "PAYMENT.IN_ANALYSIS" | "PAYMENT.PRE_AUTHORIZED" | "PAYMENT.AUTHORIZED" | "PAYMENT.CANCELLED" | "PAYMENT.REFUNDED" | "PAYMENT.REVERSED" | "PAYMENT.SETTLED";
+export declare type WebhookEventRefund = "REFUND.REQUESTED" | "REFUND.COMPLETED" | "REFUND.FAILED";
+export declare type WebhookEventMultiorder = "MULTIORDER.CREATED" | "MULTIORDER.PAID" | "MULTIORDER.NOT_PAID" | "MULTIORDER.REVERTED";
+export declare type WebhookEventMultipayment = "MULTIPAYMENT.WAITING" | "MULTIPAYMENT.IN_ANALYSIS" | "MULTIPAYMENT.AUTHORIZED" | "MULTIPAYMENT.CANCELLED" | "MULTIPAYMENT.REFUNDED";
+export declare type WebhookEventEntry = "ENTRY.SCHEDULED" | "ENTRY.SETTLED";
+export declare type WebhookEventTransfer = "TRANSFER.REQUESTED" | "TRANSFER.COMPLETED" | "TRANSFER.FAILED";
+export declare type OAuthScope = "CREATE_ORDERS" | "VIEW_ORDERS" | "CREATE_PAYMENTS" | "VIEW_PAYMENTS";
 export declare enum RequestMethod {
     get = 0,
     put = 1,
@@ -91,15 +99,15 @@ export interface Fee {
     type: string;
     amount: number;
 }
-export declare type PaymentResponseType = 'TRANSACTION' | 'PRE_PAYMENT';
+export declare type PaymentResponseType = "TRANSACTION" | "PRE_PAYMENT";
 export interface PaymentResponse extends Response<PaymentLinks>, Payment, Events {
     status: string;
     type: PaymentResponseType;
     fees: Fee[];
     fundingInstrument: FundingInstrument;
 }
-export declare type OrderStatus = 'CREATED' | 'WAITING' | 'PAID' | 'NOT_PAID' | 'REVERTED';
-export declare type PaymentStatus = 'CREATED' | 'WAITING' | 'IN_ANALYSIS' | 'PRE_AUTHORIZED' | 'AUTHORIZED' | 'CANCELLED' | 'REFUNDED' | 'REVERSED' | 'SETTLED';
+export declare type OrderStatus = "CREATED" | "WAITING" | "PAID" | "NOT_PAID" | "REVERTED";
+export declare type PaymentStatus = "CREATED" | "WAITING" | "IN_ANALYSIS" | "PRE_AUTHORIZED" | "AUTHORIZED" | "CANCELLED" | "REFUNDED" | "REVERSED" | "SETTLED";
 export interface EventResourceBase extends Events {
     id: string;
     amount: Amount;
@@ -164,7 +172,7 @@ export interface FundingInstrumentCreditCard {
     hash: string;
     holder: FundingInstrumentCreditCardHolder;
 }
-export declare type PaymentMethod = 'CREDIT_CARD' | 'BOLETO' | 'ONLINE_BANK_DEBIT' | 'WALLET';
+export declare type PaymentMethod = "CREDIT_CARD" | "BOLETO" | "ONLINE_BANK_DEBIT" | "WALLET";
 export interface FundingInstrument {
     method: PaymentMethod;
     creditCard?: FundingInstrumentCreditCard;
