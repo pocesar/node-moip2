@@ -95,14 +95,14 @@ export interface PaymentLinks extends CheckoutLinks {
     order: HATEOAS;
     checkout: CheckoutLinks;
 }
+export declare type PaymentResponseFeeType = "TRANSACTION" | "PRE_PAYMENT";
 export interface Fee {
-    type: string;
+    type: PaymentResponseFeeType;
     amount: number;
 }
-export declare type PaymentResponseType = "TRANSACTION" | "PRE_PAYMENT";
 export interface PaymentResponse extends Response<PaymentLinks>, Payment, Events {
-    status: string;
-    type: PaymentResponseType;
+    status: PaymentStatus;
+    amount: ResponseAmount;
     fees: Fee[];
     fundingInstrument: FundingInstrument;
 }
@@ -224,6 +224,13 @@ export interface Subtotals {
 export interface Amount {
     currency: 'BRL';
     subtotals: Subtotals;
+}
+export interface ResponseAmount {
+    total: number;
+    fees: number;
+    refunds: number;
+    liquid: number;
+    currency: "BRL";
 }
 export interface OrderAmount extends Amount {
     total: number;
