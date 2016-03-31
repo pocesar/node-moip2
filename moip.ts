@@ -432,6 +432,7 @@ export interface TransferInstrument {
 
 export interface Transfer {
     amount: number;
+    description?: string;
     transferInstrument: TransferInstrument;
 }
 

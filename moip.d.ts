@@ -325,6 +325,7 @@ export interface TransferInstrument {
 }
 export interface Transfer {
     amount: number;
+    description?: string;
     transferInstrument: TransferInstrument;
 }
 export interface TransferResponse extends Transfer, Response<Links> {
