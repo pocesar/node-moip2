@@ -446,6 +446,21 @@ export interface TransfersResponse extends Response<Links> {
     transfers: TransferResponse[];
 }
 
+export interface OAuthRequestResponse {
+    accessToken: string;
+    access_token: string;
+    scope: string;
+    moipAccountId: string;
+}
+
+export interface OAuthRequest {
+    appId: string;
+    appSecret: string;
+    redirectUri: string;
+    grantType: "AUTHORIZATION_CODE";
+    code: string;
+}
+
 function inspectObj(obj: Object) {
     return inspect(obj, false, 10, true);
 }
@@ -678,7 +693,7 @@ export class OAuth {
     }
 
     deleteBankAccount(bankAccountId: string) {
-        return this.parent.request<any, any>(RequestMethod.delete, `/bankaccounts/${bankAccountId}`, {}, {
+        return this.parent.request(RequestMethod.delete, `/bankaccounts/${bankAccountId}`, {}, {
             headers: this.headers
         });
     }
@@ -695,7 +710,7 @@ export class OAuth {
         })
     }
 
-    extract(query: string | any) {
+    extract(query: string | {[index: string]: any}) {
         if (typeof query === 'string') {
             var code = RegExp('code=([^&]{32})', 'i');
             var scope = RegExp('scope=([^&]+)', 'i');
@@ -719,7 +734,7 @@ export class OAuth {
     }
 
     getAccessToken(redirectUri: string) {
-        return this.parent.request(RequestMethod.post, '/oauth/accesstoken', {
+        return this.parent.request<OAuthRequestResponse, OAuthRequest>(RequestMethod.post, '/oauth/accesstoken', {
             appId: this.parent.appId,
             appSecret: this.parent.appSecret,
             redirectUri: redirectUri,

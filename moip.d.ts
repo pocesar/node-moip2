@@ -336,6 +336,19 @@ export interface TransfersResponse extends Response<Links> {
     summary: Summary;
     transfers: TransferResponse[];
 }
+export interface OAuthRequestResponse {
+    accessToken: string;
+    access_token: string;
+    scope: string;
+    moipAccountId: string;
+}
+export interface OAuthRequest {
+    appId: string;
+    appSecret: string;
+    redirectUri: string;
+    grantType: "AUTHORIZATION_CODE";
+    code: string;
+}
 export interface RequestOptions {
     headers?: {
         [index: string]: any;
@@ -387,9 +400,11 @@ export declare class OAuth {
     createBankAccount(moipAccountId: string, bankAccount: BankAccount): Bluebird<BankAccountResponse>;
     getBankAccount(bankAccountId: string): Bluebird<BankAccountResponse>;
     getBankAccounts(moipAccountId: string): Bluebird<BankAccountsResponse>;
-    deleteBankAccount(bankAccountId: string): Bluebird<any>;
+    deleteBankAccount(bankAccountId: string): Bluebird<{}>;
     updateBankAccount(bankAccountId: string, partial: BankAccount): Bluebird<BankAccountResponse>;
     createTransfer(transfer: Transfer): Bluebird<TransferResponse>;
-    extract(query: string | any): this;
-    getAccessToken(redirectUri: string): Bluebird<{}>;
+    extract(query: string | {
+        [index: string]: any;
+    }): this;
+    getAccessToken(redirectUri: string): Bluebird<OAuthRequestResponse>;
 }
