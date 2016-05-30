@@ -224,9 +224,10 @@ export interface Receiver {
 
 export interface FundingInstrumentCreditCardHolder {
     fullname: string;
-    birthDate: string;
+    birthdate: string;
     taxDocument: TaxDocument;
-    phone: Phone;
+    phone?: Phone;
+    billingAddress?: Address;
 }
 
 export interface FundingInstrumentBoleto {
