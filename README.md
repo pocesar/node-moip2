@@ -1,3 +1,5 @@
+[![npm version](https://badge.fury.io/js/%40pocesar%2Fmoip2.svg)](https://badge.fury.io/js/%40pocesar%2Fmoip2)
+
 # Moip 2
 
 Typescript Moip API 2.0 para Node.js
