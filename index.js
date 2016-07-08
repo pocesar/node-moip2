@@ -1,18 +1,12 @@
 'use strict';
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var request = require('request');
-var Bluebird = require('bluebird');
-var util_1 = require('util');
+const request = require('request');
+const Bluebird = require('bluebird');
+const util_1 = require('util');
 var debug = require('debug')('moip2');
 var debugFull = require('debug')('moip2:full');
-var MoipError = (function (_super) {
-    __extends(MoipError, _super);
-    function MoipError(errors, code) {
-        _super.call(this);
+class MoipError extends Error {
+    constructor(errors, code) {
+        super();
         this.errors = errors;
         this.code = code;
         var err = Error;
@@ -20,8 +14,8 @@ var MoipError = (function (_super) {
         this.name = 'MoipError';
         var errStrs = [];
         if (typeof errors === 'object' && errors.length) {
-            this.errors.forEach(function (error) {
-                errStrs.push(error.code + " [" + error.path + "]: " + error.description);
+            this.errors.forEach((error) => {
+                errStrs.push(`${error.code} [${error.path}]: ${error.description}`);
             });
         }
         else {
@@ -29,8 +23,7 @@ var MoipError = (function (_super) {
         }
         this.message = errStrs.join("\n") || ('' + this.errors);
     }
-    return MoipError;
-}(Error));
+}
 exports.MoipError = MoipError;
 Object.defineProperty(MoipError.prototype, 'constructor', {
     value: MoipError,
@@ -46,9 +39,8 @@ var RequestMethod = exports.RequestMethod;
 function inspectObj(obj) {
     return util_1.inspect(obj, false, 10, true);
 }
-var Moip = (function () {
-    function Moip(token, key, production, appId, appSecret) {
-        if (production === void 0) { production = false; }
+class Moip {
+    constructor(token, key, production = false, appId, appSecret) {
         this.appId = '';
         this.version = 'v2';
         this.appSecret = '';
@@ -67,27 +59,26 @@ var Moip = (function () {
             this.setAppSecret(appSecret);
         }
     }
-    Moip.prototype.js = function () {
+    js() {
         if (this.production) {
             return Moip.JS.prod;
         }
         return Moip.JS.dev;
-    };
-    Moip.prototype.setAppId = function (id) {
+    }
+    setAppId(id) {
         this.appId = id;
         return this;
-    };
-    Moip.prototype.setAppSecret = function (id) {
+    }
+    setAppSecret(id) {
         this.appSecret = id;
         return this;
-    };
-    Moip.prototype.request = function (method, uri, data, options) {
-        var _this = this;
-        return new Bluebird(function (resolve, reject) {
+    }
+    request(method, uri, data, options) {
+        return new Bluebird((resolve, reject) => {
             uri = '' + uri;
-            var url = _this.env + (options && typeof options.version !== 'undefined' ? options.version : _this.version).replace(/^([^\/])/, '/$1');
-            var headers = {
-                Authorization: _this.auth
+            let url = this.env + (options && typeof options.version !== 'undefined' ? options.version : this.version).replace(/^([^\/])/, '/$1');
+            let headers = {
+                Authorization: this.auth
             };
             if (options && options.headers) {
                 headers = options.headers;
@@ -104,12 +95,12 @@ var Moip = (function () {
                         json: true,
                         body: data || {},
                         headers: headers
-                    }, function (error, response, body) {
+                    }, (error, response, body) => {
                         if (debug.enabled) {
                             debug("\nmethod: ", RequestMethod[method], "\nurl: ", url + uri, "\ndata:", inspectObj(data), "\nbody:", inspectObj(body), "\nerror:", (error && error.stack));
                         }
                         if (debugFull.enabled) {
-                            debugFull("\nmethod: ", RequestMethod[method], "\nurl: ", url + uri, "\nerror:", (error && error.stack), "\ndata:", inspectObj(data), _this.auth, "\nsocket:", response, "\nbody:", inspectObj(body));
+                            debugFull("\nmethod: ", RequestMethod[method], "\nurl: ", url + uri, "\nerror:", (error && error.stack), "\ndata:", inspectObj(data), this.auth, "\nsocket:", response, "\nbody:", inspectObj(body));
                         }
                         if (!error && response.statusCode >= 200 && response.statusCode < 300) {
                             resolve(body);
@@ -136,121 +127,125 @@ var Moip = (function () {
                     reject(new Error('Invalid method'));
             }
         }).bind(this);
-    };
-    Moip.prototype.createCustomer = function (customer) {
+    }
+    createCustomer(customer) {
         return this.request(RequestMethod.post, '/customers', customer);
-    };
-    Moip.prototype.getCustomer = function (customerId) {
-        return this.request(RequestMethod.get, "/customers/" + customerId);
-    };
-    Moip.prototype.createOrder = function (order) {
+    }
+    getCustomer(customerId) {
+        return this.request(RequestMethod.get, `/customers/${customerId}`);
+    }
+    createOrder(order) {
         return this.request(RequestMethod.post, '/orders', order);
-    };
-    Moip.prototype.getOrder = function (orderId) {
-        return this.request(RequestMethod.get, "/orders/" + orderId);
-    };
-    Moip.prototype.createPayment = function (payment, orderId) {
-        return this.request(RequestMethod.post, "/orders/" + orderId + "/payments", payment);
-    };
-    Moip.prototype.getPayment = function (paymentId) {
-        return this.request(RequestMethod.get, "/payments/" + paymentId);
-    };
-    Moip.prototype.setNotification = function (events, endpoint) {
-        var Request = {
+    }
+    getOrder(orderId) {
+        return this.request(RequestMethod.get, `/orders/${orderId}`);
+    }
+    createPayment(payment, orderId) {
+        return this.request(RequestMethod.post, `/orders/${orderId}/payments`, payment);
+    }
+    getPayment(paymentId) {
+        return this.request(RequestMethod.get, `/payments/${paymentId}`);
+    }
+    resendWebhook(resourceId, event) {
+        let Request = {
+            resourceId
+        };
+        if (event) {
+            Request.event = event;
+        }
+        return this.request(RequestMethod.post, '/webhooks/', Request);
+    }
+    setNotification(events, endpoint) {
+        let Request = {
             events: events,
             media: 'WEBHOOK',
             target: endpoint
         };
         return this.request(RequestMethod.post, '/preferences/notifications', Request);
-    };
-    Moip.prototype.deleteNotification = function (id) {
-        return this.request(RequestMethod.delete, "/preferences/notifications/" + id);
-    };
-    Moip.prototype.getNotifications = function () {
+    }
+    deleteNotification(id) {
+        return this.request(RequestMethod.delete, `/preferences/notifications/${id}`);
+    }
+    getNotifications() {
         return this.request(RequestMethod.get, '/preferences/notifications');
-    };
-    Moip.prototype.getOAuthUrl = function (redirectUri, scope) {
-        return this.env + "/oauth/authorize?responseType=CODE&appId=" + this.appId + "&redirectUri=" + encodeURIComponent(redirectUri) + "&scope=" + scope.join('|');
-    };
-    Moip.prototype.getOAuthInstance = function () {
+    }
+    getOAuthUrl(redirectUri, scope) {
+        return `${this.env}/oauth/authorize?responseType=CODE&appId=${this.appId}&redirectUri=${encodeURIComponent(redirectUri)}&scope=${scope.join('|')}`;
+    }
+    getOAuthInstance() {
         return OAuth.factory(this);
-    };
-    Moip.JS = {
-        dev: '//assets.moip.com.br/v2/moip.min.js',
-        prod: '//assets.moip.com.br/v2/moip.min.js'
-    };
-    return Moip;
-}());
+    }
+}
+Moip.JS = {
+    dev: '//assets.moip.com.br/v2/moip.min.js',
+    prod: '//assets.moip.com.br/v2/moip.min.js'
+};
 exports.Moip = Moip;
-var OAuth = (function () {
-    function OAuth(parent) {
+class OAuth {
+    constructor(parent) {
         this.parent = parent;
         this.scope = [];
         this.accessToken = '';
     }
-    OAuth.factory = function (parent) {
+    static factory(parent) {
         return new this(parent);
-    };
-    Object.defineProperty(OAuth.prototype, "headers", {
-        get: function () {
-            return {
-                Authorization: "OAuth " + this.accessToken
-            };
-        },
-        enumerable: true,
-        configurable: true
-    });
-    OAuth.prototype.setCode = function (code) {
+    }
+    get headers() {
+        return {
+            Authorization: `OAuth ${this.accessToken}`
+        };
+    }
+    setCode(code) {
         this.code = code;
         return this;
-    };
-    OAuth.prototype.setScope = function (scope) {
-        this.scope = scope.split(/[\+\| ]/g).map(function (value) {
+    }
+    setScope(scope) {
+        this.scope = scope.split(/[\+\| ]/g).map((value) => {
             return value.toUpperCase();
         });
         return this;
-    };
-    OAuth.prototype.getAccount = function (id) {
-        return this.parent.request(RequestMethod.get, "/accounts/" + id, {}, {
+    }
+    getAccount(id) {
+        return this.parent.request(RequestMethod.get, `/accounts/${id}`, {}, {
             headers: this.headers
         });
-    };
-    OAuth.prototype.createAccount = function (accountData) {
-        return this.parent.request(RequestMethod.post, "/accounts", accountData, {
+    }
+    createAccount(accountData) {
+        return this.parent.request(RequestMethod.post, `/accounts`, accountData, {
             headers: this.headers
         });
-    };
-    OAuth.prototype.createBankAccount = function (moipAccountId, bankAccount) {
-        return this.parent.request(RequestMethod.post, "/accounts/" + moipAccountId + "/bankaccounts", bankAccount, {
+    }
+    createBankAccount(moipAccountId, bankAccount) {
+        return this.parent.request(RequestMethod.post, `/accounts/${moipAccountId}/bankaccounts`, bankAccount, {
             headers: this.headers
         });
-    };
-    OAuth.prototype.getBankAccount = function (bankAccountId) {
-        return this.parent.request(RequestMethod.get, "/bankaccounts/" + bankAccountId, {}, {
+    }
+    getBankAccount(bankAccountId) {
+        return this.parent.request(RequestMethod.get, `/bankaccounts/${bankAccountId}`, {}, {
             headers: this.headers
         });
-    };
-    OAuth.prototype.getBankAccounts = function (moipAccountId) {
-        return this.parent.request(RequestMethod.get, "/accounts/" + moipAccountId + "/bankaccounts", {}, {
+    }
+    getBankAccounts(moipAccountId) {
+        return this.parent.request(RequestMethod.get, `/accounts/${moipAccountId}/bankaccounts`, {}, {
             headers: this.headers
         });
-    };
-    OAuth.prototype.deleteBankAccount = function (bankAccountId) {
-        return this.parent.request(RequestMethod.delete, "/bankaccounts/" + bankAccountId, {}, {
+    }
+    deleteBankAccount(bankAccountId) {
+        return this.parent.request(RequestMethod.delete, `/bankaccounts/${bankAccountId}`, {}, {
             headers: this.headers
         });
-    };
-    OAuth.prototype.updateBankAccount = function (bankAccountId, partial) {
-        return this.parent.request(RequestMethod.put, "/bankaccounts/" + bankAccountId, partial, {
+    }
+    updateBankAccount(bankAccountId, partial) {
+        return this.parent.request(RequestMethod.put, `/bankaccounts/${bankAccountId}`, partial, {
             headers: this.headers
         });
-    };
-    OAuth.prototype.createTransfer = function (transfer) {
-        return this.parent.request(RequestMethod.post, "/transfers", transfer, {
+    }
+    createTransfer(transfer) {
+        return this.parent.request(RequestMethod.post, `/transfers`, transfer, {
             headers: this.headers
         });
-    };
-    OAuth.prototype.extract = function (query) {
+    }
+    extract(query) {
         if (typeof query === 'string') {
             var code = RegExp('code=([^&]{32})', 'i');
             var scope = RegExp('scope=([^&]+)', 'i');
@@ -271,8 +266,8 @@ var OAuth = (function () {
             }
         }
         return this;
-    };
-    OAuth.prototype.getAccessToken = function (redirectUri) {
+    }
+    getAccessToken(redirectUri) {
         return this.parent.request(RequestMethod.post, '/oauth/accesstoken', {
             appId: this.parent.appId,
             appSecret: this.parent.appSecret,
@@ -282,7 +277,6 @@ var OAuth = (function () {
         }, {
             version: ''
         });
-    };
-    return OAuth;
-}());
+    }
+}
 exports.OAuth = OAuth;

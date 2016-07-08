@@ -83,9 +83,39 @@ export interface IMoipError {
 }
 
 export interface Webhook {
-    events: string[];
+    events: WebhookEvents[];
     target: string;
     media: string;
+}
+
+export interface WebhookRequest {
+    resourceId: string;
+    event?: WebhookEvents;
+}
+
+export interface WebhookRequestResponse {
+    id: string;
+    resourceId: string;
+    event: WebhookEvents;
+    url: string;
+    status: OrderStatus | PaymentStatus;
+    sentAt: string;
+}
+
+export interface WebhookNotificationOrder extends OrderResponseBase, Response<OrderLinks> {
+
+}
+
+export interface WebhookNotificationPayment extends PaymentResponseBase, Response<Links> {
+
+}
+
+export interface WebhookNotification {
+    event: WebhookEvents;
+    resource: {
+        payment?: WebhookNotificationPayment;
+        order?: WebhookNotificationOrder;
+    }
 }
 
 export interface WebhookResponse extends Webhook {
@@ -143,7 +173,7 @@ export interface Events {
     events: Event[];
 }
 
-export interface OrderResponse extends Response<OrderLinks>, Order, Events {
+export interface OrderResponseBase extends Order {
     status: string;
     amount: OrderAmount;
     payments: any[];
@@ -151,6 +181,9 @@ export interface OrderResponse extends Response<OrderLinks>, Order, Events {
     entries: any[];
     receivers: Receiver[];
     shippingAddress: Address;
+}
+
+export interface OrderResponse extends OrderResponseBase, Response<OrderLinks>, Events {
 }
 
 export interface PaymentLinks extends CheckoutLinks {
@@ -165,11 +198,14 @@ export interface Fee {
     amount: number;
 }
 
-export interface PaymentResponse extends Response<PaymentLinks>, Payment, Events {
+export interface PaymentResponseBase {
     status: PaymentStatus;
     amount: ResponseAmount;
     fees: Fee[];
     fundingInstrument: FundingInstrument;
+}
+
+export interface PaymentResponse extends PaymentResponseBase, Response<PaymentLinks>, Payment, Events {
 }
 
 export type OrderStatus = "CREATED" | "WAITING" | "PAID" | "NOT_PAID" | "REVERTED";
@@ -224,6 +260,7 @@ export interface Receiver {
 
 export interface FundingInstrumentCreditCardHolder {
     fullname: string;
+    birthDate: string;
     birthdate: string;
     taxDocument: TaxDocument;
     phone?: Phone;
@@ -604,7 +641,17 @@ export class Moip {
         return this.request<PaymentResponse, any>(RequestMethod.get, `/payments/${paymentId}`);
     }
 
-    setNotification(events: string[], endpoint: string) {
+    resendWebhook(resourceId: string, event?: WebhookEvents) {
+        let Request: WebhookRequest = {
+            resourceId
+        }
+        if (event) {
+            Request.event = event;
+        }
+        return this.request<WebhookRequestResponse, WebhookRequest>(RequestMethod.post, '/webhooks/', Request);
+    }
+
+    setNotification(events: WebhookEvents[], endpoint: string) {
         let Request: Webhook = {
             events: events,
             media: 'WEBHOOK',

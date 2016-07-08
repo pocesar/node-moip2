@@ -1,3 +1,4 @@
+/// <reference types="bluebird" />
 import * as Bluebird from 'bluebird';
 export interface IMoipCustomError extends Error {
     errors: IMoipError[];
@@ -31,9 +32,32 @@ export interface IMoipError {
     description: string;
 }
 export interface Webhook {
-    events: string[];
+    events: WebhookEvents[];
     target: string;
     media: string;
+}
+export interface WebhookRequest {
+    resourceId: string;
+    event?: WebhookEvents;
+}
+export interface WebhookRequestResponse {
+    id: string;
+    resourceId: string;
+    event: WebhookEvents;
+    url: string;
+    status: OrderStatus | PaymentStatus;
+    sentAt: string;
+}
+export interface WebhookNotificationOrder extends OrderResponseBase, Response<OrderLinks> {
+}
+export interface WebhookNotificationPayment extends PaymentResponseBase, Response<Links> {
+}
+export interface WebhookNotification {
+    event: WebhookEvents;
+    resource: {
+        payment?: WebhookNotificationPayment;
+        order?: WebhookNotificationOrder;
+    };
 }
 export interface WebhookResponse extends Webhook {
     token: string;
@@ -82,7 +106,7 @@ export interface OrderLinks extends Links {
 export interface Events {
     events: Event[];
 }
-export interface OrderResponse extends Response<OrderLinks>, Order, Events {
+export interface OrderResponseBase extends Order {
     status: string;
     amount: OrderAmount;
     payments: any[];
@@ -90,6 +114,8 @@ export interface OrderResponse extends Response<OrderLinks>, Order, Events {
     entries: any[];
     receivers: Receiver[];
     shippingAddress: Address;
+}
+export interface OrderResponse extends OrderResponseBase, Response<OrderLinks>, Events {
 }
 export interface PaymentLinks extends CheckoutLinks {
     order: HATEOAS;
@@ -100,11 +126,13 @@ export interface Fee {
     type: PaymentResponseFeeType;
     amount: number;
 }
-export interface PaymentResponse extends Response<PaymentLinks>, Payment, Events {
+export interface PaymentResponseBase {
     status: PaymentStatus;
     amount: ResponseAmount;
     fees: Fee[];
     fundingInstrument: FundingInstrument;
+}
+export interface PaymentResponse extends PaymentResponseBase, Response<PaymentLinks>, Payment, Events {
 }
 export declare type OrderStatus = "CREATED" | "WAITING" | "PAID" | "NOT_PAID" | "REVERTED";
 export declare type PaymentStatus = "CREATED" | "WAITING" | "IN_ANALYSIS" | "PRE_AUTHORIZED" | "AUTHORIZED" | "CANCELLED" | "REFUNDED" | "REVERSED" | "SETTLED";
@@ -149,6 +177,7 @@ export interface Receiver {
 }
 export interface FundingInstrumentCreditCardHolder {
     fullname: string;
+    birthDate: string;
     birthdate: string;
     taxDocument: TaxDocument;
     phone?: Phone;
@@ -379,7 +408,8 @@ export declare class Moip {
     getOrder(orderId: string): Bluebird<OrderResponse>;
     createPayment(payment: Payment, orderId: string): Bluebird<PaymentResponse>;
     getPayment(paymentId: string): Bluebird<PaymentResponse>;
-    setNotification(events: string[], endpoint: string): Bluebird<WebhookResponse>;
+    resendWebhook(resourceId: string, event?: WebhookEvents): Bluebird<WebhookRequestResponse>;
+    setNotification(events: WebhookEvents[], endpoint: string): Bluebird<WebhookResponse>;
     deleteNotification(id: string): Bluebird<any>;
     getNotifications(): Bluebird<WebhookResponse[]>;
     getOAuthUrl(redirectUri: string, scope: OAuthScope[]): string;

@@ -1,14 +1,18 @@
 {
     "name": "@pocesar/moip2",
-    "version": "2.0.2",
-    "main": "./moip.js",
-    "typings": "./moip.d.ts",
+    "version": "3.0.0",
+    "main": "./index.js",
+    "typings": "./index.d.ts",
     "description": "API for MOIP v2 HATEOAS with Typescript typings",
     "author": "Paulo Cesar <https://github.com/pocesar>",
     "dependencies": {
-        "request": "^2.69.0",
-        "bluebird": "^3.3.4",
+        "request": "^2.72.0",
+        "bluebird": "^3.4.1",
         "debug": "^2.2.0"
+    },
+    "devDependencies": {
+        "@types/bluebird": "*",
+        "@types/request": "*"
     },
     "repository": {
         "type": "git",
