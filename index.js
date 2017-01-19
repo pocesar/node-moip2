@@ -288,6 +288,21 @@ class Subscription {
     updatePlan(planId, plan) {
         return this.request(RequestMethod.put, `/plans/${planId}`, plan);
     }
+    createCustomer(customer, isNew) {
+        return this.request(RequestMethod.post, '/customers?new_vault=${isNew}', customer);
+    }
+    getCustomers() {
+        return this.request(RequestMethod.get, `/customers`);
+    }
+    getCustomer(customerId) {
+        return this.request(RequestMethod.get, `/customers/${customerId}`);
+    }
+    updateCustomer(customerId, customer) {
+        return this.request(RequestMethod.put, `/customers/${customerId}`, customer);
+    }
+    updateCustomerBilling(customerId, customerBilling) {
+        return this.request(RequestMethod.put, `/customers/${customerId}/billing_infos`, customerBilling);
+    }
     createCustomerSubscription(subscription, isNew) {
         return this.request(RequestMethod.post, '/subscriptions?new_customer=${isNew}', subscription);
     }
@@ -307,7 +322,7 @@ class Subscription {
         return this.request(RequestMethod.put, `/subscriptions/${subscriptionId}/cancel`);
     }
     updateSubscription(subscriptionId, subscription) {
-        return this.request(RequestMethod.put, `/subscriptions/${subscriptionId}`);
+        return this.request(RequestMethod.put, `/subscriptions/${subscriptionId}`, subscription);
     }
     getSubscriptionInvoices(subscriptionId) {
         return this.request(RequestMethod.get, `/subscriptions/${subscriptionId}/invoices`);
