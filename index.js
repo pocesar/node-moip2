@@ -175,6 +175,12 @@ class Moip {
     getOAuthInstance() {
         return OAuth.factory(this);
     }
+    createCreditCard(creditCard, customerId) {
+        return this.request(RequestMethod.post, `customers/${customerId}/fundinginstruments`, creditCard);
+    }
+    deleteCreditCard(creditCardId) {
+        return this.request(RequestMethod.delete, `fundinginstruments/${creditCardId}`);
+    }
 }
 Moip.JS = {
     dev: '//assets.moip.com.br/v2/moip.min.js',
