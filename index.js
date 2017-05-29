@@ -113,10 +113,10 @@ class Moip {
                         }
                         else if (body && body.ERROR) {
                             reject(new MoipError([{
-                                    code: '?',
-                                    path: '?',
-                                    description: body.ERROR
-                                }], response.statusCode));
+                                code: '?',
+                                path: '?',
+                                description: body.ERROR
+                            }], response.statusCode));
                         }
                         else {
                             reject(new Error(body ? body : response.statusCode));
@@ -175,12 +175,181 @@ class Moip {
     getOAuthInstance() {
         return OAuth.factory(this);
     }
+    createCreditCard(creditCard, customerId) {
+        return this.request(RequestMethod.post, `customers/${customerId}/fundinginstruments`, creditCard);
+    }
+    deleteCreditCard(creditCardId) {
+        return this.request(RequestMethod.delete, `fundinginstruments/${creditCardId}`);
+    }
 }
 Moip.JS = {
     dev: '//assets.moip.com.br/v2/moip.min.js',
     prod: '//assets.moip.com.br/v2/moip.min.js'
 };
 exports.Moip = Moip;
+class Subscription {
+    constructor(token, key, production = false, appId, appSecret) {
+        this.appId = '';
+        this.version = 'v1';
+        this.appSecret = '';
+        this.auth = 'Basic ' + (new Buffer(token + ':' + key)).toString('base64');
+        this.production = production;
+        if (production === true) {
+            this.env = 'https://api.moip.com.br/assinaturas';
+        }
+        else {
+            this.env = 'https://sandbox.moip.com.br/assinaturas';
+        }
+        if (appId) {
+            this.setAppId(appId);
+        }
+        if (appSecret) {
+            this.setAppSecret(appSecret);
+        }
+    }
+    js() {
+        if (this.production) {
+            return Moip.JS.prod;
+        }
+        return Moip.JS.dev;
+    }
+    setAppId(id) {
+        this.appId = id;
+        return this;
+    }
+    setAppSecret(id) {
+        this.appSecret = id;
+        return this;
+    }
+    request(method, uri, data, options) {
+        return new Bluebird((resolve, reject) => {
+            uri = '' + uri;
+            let url = this.env + (options && typeof options.version !== 'undefined' ? options.version : this.version).replace(/^([^\/])/, '/$1');
+            let headers = {
+                Authorization: this.auth
+            };
+            if (options && options.headers) {
+                headers = options.headers;
+            }
+            switch (method) {
+                case RequestMethod.delete:
+                case RequestMethod.get:
+                case RequestMethod.put:
+                case RequestMethod.post:
+                    request({
+                        method: RequestMethod[method],
+                        url: url + uri,
+                        strictSSL: true,
+                        json: true,
+                        body: data || {},
+                        headers: headers
+                    }, (error, response, body) => {
+                        if (debug.enabled) {
+                            debug("\nmethod: ", RequestMethod[method], "\nurl: ", url + uri, "\ndata:", inspectObj(data), "\nbody:", inspectObj(body), "\nerror:", (error && error.stack));
+                        }
+                        if (debugFull.enabled) {
+                            debugFull("\nmethod: ", RequestMethod[method], "\nurl: ", url + uri, "\nerror:", (error && error.stack), "\ndata:", inspectObj(data), this.auth, "\nsocket:", response, "\nbody:", inspectObj(body));
+                        }
+                        if (!error && response.statusCode >= 200 && response.statusCode < 300) {
+                            resolve(body);
+                        }
+                        else if (body && body.errors && body.errors.length) {
+                            reject(new MoipError(body.errors, response.statusCode));
+                        }
+                        else if (error) {
+                            reject(error instanceof Error ? error : new Error(error));
+                        }
+                        else if (body && body.ERROR) {
+                            reject(new MoipError([{
+                                code: '?',
+                                path: '?',
+                                description: body.ERROR
+                            }], response.statusCode));
+                        }
+                        else {
+                            reject(new Error(body ? body : response.statusCode));
+                        }
+                    });
+                    break;
+                default:
+                    reject(new Error('Invalid method'));
+            }
+        }).bind(this);
+    }
+    createPlan(plan) {
+        return this.request(RequestMethod.post, '/plans', plan);
+    }
+    getPlans() {
+        return this.request(RequestMethod.get, `/plans`);
+    }
+    getPlan(planId) {
+        return this.request(RequestMethod.get, `/plans/${planId}`);
+    }
+    activatePlan(planId) {
+        return this.request(RequestMethod.put, `/plans/${planId}/activate`);
+    }
+    inactivatePlan(planId) {
+        return this.request(RequestMethod.put, `/plans/${planId}/inactivate`);
+    }
+    updatePlan(planId, plan) {
+        return this.request(RequestMethod.put, `/plans/${planId}`, plan);
+    }
+    createCustomer(customer, isNew) {
+        return this.request(RequestMethod.post, '/customers?new_vault=${isNew}', customer);
+    }
+    getCustomers() {
+        return this.request(RequestMethod.get, `/customers`);
+    }
+    getCustomer(customerId) {
+        return this.request(RequestMethod.get, `/customers/${customerId}`);
+    }
+    updateCustomer(customerId, customer) {
+        return this.request(RequestMethod.put, `/customers/${customerId}`, customer);
+    }
+    updateCustomerBilling(customerId, customerBilling) {
+        return this.request(RequestMethod.put, `/customers/${customerId}/billing_infos`, customerBilling);
+    }
+    createCustomerSubscription(subscription, isNew) {
+        return this.request(RequestMethod.post, '/subscriptions?new_customer=${isNew}', subscription);
+    }
+    getSubscriptions() {
+        return this.request(RequestMethod.get, `/subscriptions`);
+    }
+    getSubscription(subscriptionId) {
+        return this.request(RequestMethod.get, `/subscriptions/${subscriptionId}`);
+    }
+    suspendSubscription(subscriptionId) {
+        return this.request(RequestMethod.put, `/subscriptions/${subscriptionId}/suspend`);
+    }
+    activateSubscription(subscriptionId) {
+        return this.request(RequestMethod.put, `/subscriptions/${subscriptionId}/activate`);
+    }
+    cancelSubscription(subscriptionId) {
+        return this.request(RequestMethod.put, `/subscriptions/${subscriptionId}/cancel`);
+    }
+    updateSubscription(subscriptionId, subscription) {
+        return this.request(RequestMethod.put, `/subscriptions/${subscriptionId}`, subscription);
+    }
+    getSubscriptionInvoices(subscriptionId) {
+        return this.request(RequestMethod.get, `/subscriptions/${subscriptionId}/invoices`);
+    }
+    getInvoice(invoiceId) {
+        return this.request(RequestMethod.get, `/invoices/${invoiceId}`);
+    }
+    getInvoicePayments(invoiceId) {
+        return this.request(RequestMethod.get, `/invoices/${invoiceId}/payments`);
+    }
+    getPayment(paymentId) {
+        return this.request(RequestMethod.get, `/payments/${paymentId}`);
+    }
+    getOAuthUrl(redirectUri, scope) {
+        return `${this.env}/oauth/authorize?responseType=CODE&appId=${this.appId}&redirectUri=${encodeURIComponent(redirectUri)}&scope=${scope.join('|')}`;
+    }
+    getOAuthInstance() {
+        return OAuth.factory(this);
+    }
+}
+exports.Subscription = Subscription;
 class OAuth {
     constructor(parent) {
         this.parent = parent;
@@ -275,8 +444,8 @@ class OAuth {
             grantType: 'AUTHORIZATION_CODE',
             code: this.code
         }, {
-            version: ''
-        });
+                version: ''
+            });
     }
 }
 exports.OAuth = OAuth;
